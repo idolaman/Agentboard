@@ -1,0 +1,50 @@
+{
+  "name": "cursor-heads-up",
+  "version": "0.0.1",
+  "description": "Heads-up display for active chats and terminals",
+  "publisher": "yourname",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cursorHeadsUp.showTasks",
+        "title": "Show Active Tasks"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "cursorHeadsUp.showTasks",
+        "key": "alt+cmd+t",
+        "mac": "alt+cmd+t"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/idolaman/productivity-master.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/idolaman/productivity-master/issues"
+  },
+  "homepage": "https://github.com/idolaman/productivity-master#readme",
+  "devDependencies": {
+    "@types/node": "^16.0.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.0.0"
+  }
+}
