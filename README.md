@@ -56,3 +56,27 @@ Detectors ─┐        ┌── Matchers ─┐
                  │    UI emits  JumpRequests
                  ▼
             JumpManager ────► Actions (chat / terminal / window)
+
+## Usage
+- Open the Command Palette and run "Show Active Tasks" (or press Alt+Cmd+T) to verify the extension is active.
+- To enable chat thinking detection from Cursor data, set the following settings:
+  - `cursorHeadsUp.enableDbAccess`: true
+  - Optional: `cursorHeadsUp.dbPollingIntervalMs` (default 5000)
+  - Optional: `cursorHeadsUp.dbPathOverride` (absolute path to state.vscdb)
+
+When detection is active, a status bar indicator shows "🤖 Chat: Thinking…" while Cursor chat is streaming.
+
+## Security & Privacy
+- This extension can read Cursor's local state database (`state.vscdb`) in read-only mode to infer chat status. No data is sent anywhere.
+- The feature is opt-in via `cursorHeadsUp.enableDbAccess` and can be disabled anytime.
+- Paths are auto-detected per OS; you can override with `cursorHeadsUp.dbPathOverride`.
+
+## Development
+- Build: `npm run compile`
+- Watch: `npm run watch`
+- Debug: F5 to launch Extension Development Host
+
+## TODO
+- Ship DB-based detector (done)
+- Polish status bar indicator (done)
+- Add QuickPick with active chats/terminals (future)

@@ -6,6 +6,10 @@
   "engines": {
     "vscode": "^1.80.0"
   },
+  "enabledApiProposals": [
+    "chat",
+    "commands"
+  ],
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -17,6 +21,28 @@
         "title": "Show Active Tasks"
       }
     ],
+    "configuration": {
+      "type": "object",
+      "title": "Cursor Heads Up",
+      "properties": {
+        "cursorHeadsUp.enableDbAccess": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow the extension to read Cursor's local chat database (read-only) to detect chat thinking state."
+        },
+        "cursorHeadsUp.dbPollingIntervalMs": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 500,
+          "description": "Polling interval in milliseconds for checking chat state from the local database."
+        },
+        "cursorHeadsUp.dbPathOverride": {
+          "type": "string",
+          "default": "",
+          "description": "Optional absolute path override to Cursor's state.vscdb file. Leave empty to auto-detect per-OS."
+        }
+      }
+    },
     "keybindings": [
       {
         "command": "cursorHeadsUp.showTasks",
@@ -36,7 +62,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/idolaman/productivity-master/issues"
@@ -46,5 +72,8 @@
     "@types/node": "^16.0.0",
     "@types/vscode": "^1.80.0",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3"
   }
 }
