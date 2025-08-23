@@ -18,3 +18,4 @@ out/
 
 state.vscdb
 venv/
+dist/
