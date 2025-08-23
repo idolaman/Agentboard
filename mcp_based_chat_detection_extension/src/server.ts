@@ -77,7 +77,7 @@ mcp.registerTool(
   {
     title: "End a thinking chat log",
     description:
-      "CRITICAL — MUST RUN LAST BEFORE SENDING YOUR ANSWER FOR THIS MESSAGE.\n- Always call exactly once, even on cancel/error.\n- Input: session_id from start_message_log.\n- Purpose: close the step and persist outcome.",
+      "CRITICAL — MUST RUN LAST BEFORE SENDING YOUR ANSWER FOR THIS MESSAGE.\n- Always call exactly once, even on cancel/error.\n- If you ran approval-gated commands, you MUST still run this after the final after_command_log.\n- Input: session_id from start_message_log.\n- Purpose: close the step and persist outcome.",
     inputSchema: {
       session_id: z.string(),
       status: z.enum(["ok", "cancelled", "error"]),
@@ -100,6 +100,58 @@ mcp.registerTool(
     appendJSONL({ type: "end", session_id: s.id, status: s.status, ended_at: s.ended_at, tokens_in: s.tokens_in, tokens_out: s.tokens_out, error: s.error });
     await notifySession(s.id);
 
+    return { content: [{ type: "text", text: "ok" }] };
+  }
+);
+
+// BEFORE-COMMAND tool
+mcp.registerTool(
+  "before_command_log",
+  {
+    title: "Before a CLI/Tool call",
+    description:
+      "CRITICAL — MUST RUN BEFORE APPROVAL-GATED COMMANDS ONLY.\n- Scope: shell/CLI runs or MCP calls that may trigger a user-approval dialog in Cursor (e.g., terminal commands, external scripts, package managers).\n- Do NOT call for read-only operations or safe internal tools (e.g., file reads/writes within the workspace that do not prompt, searches, lints, resource reads).\n- Input: session_id from start_message_log.\n- Purpose: mark the beginning of an approval-gated action.",
+    inputSchema: {
+      session_id: z.string()
+    }
+  },
+  async (args, _extra) => {
+    const s = sessions.get(args.session_id);
+    if (!s) {
+      return { content: [{ type: "text", text: "unknown session_id (ignored)" }] };
+    }
+    const ts = now();
+    const ev = events.get(s.id) ?? [];
+    ev.push({ ts, type: "start", payload: { phase: "before_command" } });
+    events.set(s.id, ev);
+    appendJSONL({ type: "command_before", session_id: s.id, ts });
+    await notifySession(s.id);
+    return { content: [{ type: "text", text: "ok" }] };
+  }
+);
+
+// AFTER-COMMAND tool
+mcp.registerTool(
+  "after_command_log",
+  {
+    title: "After a CLI/Tool call",
+    description:
+      "CRITICAL — MUST RUN IMMEDIATELY AFTER APPROVAL-GATED COMMANDS ONLY.\n- Always call exactly once per approval-gated action, even on failure.\n- Do NOT call after read-only operations or safe internal tools (e.g., file reads/writes that do not prompt, searches, lints, resource reads).\n- Input: session_id from start_message_log.\n- Purpose: mark completion of an approval-gated action.",
+    inputSchema: {
+      session_id: z.string()
+    }
+  },
+  async (args, _extra) => {
+    const s = sessions.get(args.session_id);
+    if (!s) {
+      return { content: [{ type: "text", text: "unknown session_id (ignored)" }] };
+    }
+    const ts = now();
+    const ev = events.get(s.id) ?? [];
+    ev.push({ ts, type: "end", payload: { phase: "after_command" } });
+    events.set(s.id, ev);
+    appendJSONL({ type: "command_after", session_id: s.id, ts });
+    await notifySession(s.id);
     return { content: [{ type: "text", text: "ok" }] };
   }
 );
