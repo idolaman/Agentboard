@@ -1,0 +1,61 @@
+{
+  "name": "thinking-logger-view",
+  "displayName": "Thinking Logger View",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A Cursor/VS Code sidebar to visualize thinking sessions from the MCP server.",
+  "publisher": "local",
+  "engines": { "vscode": "^1.89.0" },
+  "main": "./dist/extension.js",
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc -w -p ."
+  },
+  "contributes": {
+    "configuration": {
+      "title": "Thinking Logger",
+      "properties": {
+        "thinkingLogger.serverUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:17890",
+          "description": "Base URL of the Thinking Logger MCP server (HTTP/SSE)."
+        },
+        "thinkingLogger.clientToken": {
+          "type": "string",
+          "default": "local-dev-token",
+          "description": "Client token to scope sessions (sent as X-Client-Token)."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "thinkingLogger",
+          "title": "Thinking",
+          "icon": "./media/brain.svg"
+        }
+      ]
+    },
+    "views": {
+      "thinkingLogger": [
+        {
+          "type": "webview",
+          "id": "thinkingLogger.sessions",
+          "name": "Sessions"
+        }
+      ]
+    },
+    "commands": [
+      { "command": "thinkingLogger.refresh", "title": "Refresh Thinking Sessions" }
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.89.0",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.3"
+  }
+}
+

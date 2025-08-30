@@ -2,18 +2,17 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Extension",
+      "name": "Run Thinking Logger UI",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}",
-        "--enable-proposed-api",
-        "yourname.cursor-heads-up"
+        "--extensionDevelopmentPath=${workspaceFolder}/thinking-logger-ui"
       ],
       "outFiles": [
-        "${workspaceFolder}/out/**/*.js"
-      ]
+        "${workspaceFolder}/thinking-logger-ui/dist/**/*.js"
+      ],
+      "preLaunchTask": "build-thinking-logger-ui"
     }
   ]
 }

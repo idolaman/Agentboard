@@ -1,5 +1,6 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import http from "node:http";
 import { z } from "zod";
 import fs from "node:fs";
 import path from "node:path";
@@ -28,6 +29,9 @@ const DATA_DIR = path.resolve(process.cwd(), "data");
 const JSONL = path.join(DATA_DIR, "thinking-sessions.jsonl");
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
+// Local hardcoded token for client scoping (can be replaced later by real tokens)
+const DEFAULT_CLIENT_TOKEN = "local-dev-token";
+
 function now() { return new Date().toISOString(); }
 function uuid() { return crypto.randomUUID(); }
 function appendJSONL(obj: any) {
@@ -40,6 +44,10 @@ const mcp = new McpServer({ name: "thinking-logger", version: "0.1.0" });
 async function notifySession(sessionId: string) {
   await mcp.server.sendResourceUpdated({ uri: `thinking://sessions/${sessionId}` });
   await mcp.server.sendResourceListChanged();
+  const s = sessions.get(sessionId);
+  if (s?.client) {
+    try { await mcp.server.sendResourceUpdated({ uri: `thinking://clients/${s.client}/sessions` }); } catch {}
+  }
 }
 
 // START tool
@@ -50,16 +58,18 @@ mcp.registerTool(
     description:
       "CRITICAL — MUST RUN FIRST ON EVERY USER MESSAGE.\n- Call immediately before any reasoning or tools.\n- Purpose: log the high-level step you are about to do.\n- Output: returns a session_id string.\n- Requirement: you MUST call end_message_log with this session_id right before your final answer for this message.",
     inputSchema: {
-      title: z.string().optional(),
+      title: z.string(),
       session_id: z.string()
     }
   },
-  async (args, _extra) => {
+  async (args, extra) => {
+    const clientId = String((extra as any)?.requestInfo?.headers?.["x-client-token"] ?? DEFAULT_CLIENT_TOKEN);
     const s: Session = {
       id: uuid(),
       started_at: now()
     };
     if (args.title !== undefined) s.title = args.title;
+    s.client = clientId;
 
     sessions.set(s.id, s);
     events.set(s.id, [{ ts: s.started_at, type: "start", payload: { title: s.title } }]);
@@ -167,6 +177,16 @@ mcp.resource(
 );
 
 mcp.resource(
+  "client-sessions",
+  new ResourceTemplate("thinking://clients/{client}/sessions", { list: undefined }),
+  async (_uri, vars) => {
+    const client = (vars as Record<string, string>).client;
+    const list = Array.from(sessions.values()).filter(s => s.client === client).sort((a, b) => (b.started_at.localeCompare(a.started_at)));
+    return { contents: [{ uri: `thinking://clients/${client}/sessions`, text: JSON.stringify(list, null, 2), mimeType: "application/json" }] };
+  }
+);
+
+mcp.resource(
   "sessions-item",
   new ResourceTemplate("thinking://sessions/{id}", { list: undefined }),
   async (_uri, vars) => {
@@ -183,5 +203,16 @@ mcp.resource(
   }
 );
 
-// connect over stdio
-await mcp.connect(new StdioServerTransport());
+// HTTP/SSE server only (shared across all clients)
+const PORT = Number(process.env.THINKING_LOGGER_HTTP_PORT || "17890");
+const httpTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: () => crypto.randomUUID() });
+await mcp.connect(httpTransport);
+http
+  .createServer((req, res) => {
+    httpTransport.handleRequest(req, res).catch(() => {
+      try {
+        res.writeHead(500).end();
+      } catch {}
+    });
+  })
+  .listen(PORT);

@@ -1,0 +1,16 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build-thinking-logger-ui",
+      "type": "shell",
+      "command": "npm run build",
+      "options": {
+        "cwd": "${workspaceFolder}/thinking-logger-ui"
+      },
+      "problemMatcher": ["$tsc"],
+      "group": "build"
+    }
+  ]
+}
+
