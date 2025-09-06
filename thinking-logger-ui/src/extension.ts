@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 // We avoid the SDK in the UI to prevent SSE/stream polyfills in the extension host.
 // Use simple HTTP JSON-RPC with polling instead.
-import fs from 'node:fs';
-import path from 'node:path';
 
 export function activate(context: vscode.ExtensionContext) {
 	const panel = vscode.window.registerWebviewViewProvider(
@@ -11,11 +9,6 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 
 	context.subscriptions.push(panel);
-	context.subscriptions.push(
-		vscode.commands.registerCommand('thinkingLogger.refresh', () => {
-			vscode.commands.executeCommand('thinkingLogger.sessions.refresh');
-		})
-	);
 }
 
 export function deactivate() {}
@@ -29,12 +22,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 		};
 		webviewView.webview.html = getWebviewHtml();
 
-		// Hook a refresh command to this webview instance
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand('thinkingLogger.sessions.refresh', () => {
-				try { webviewView.webview.postMessage({ type: 'refresh' }); } catch {}
-			})
-		);
+		// No commands; view updates automatically.
 
 		const cfg = vscode.workspace.getConfiguration('thinkingLogger');
 		const serverUrl = cfg.get<string>('serverUrl') || 'http://127.0.0.1:17890';
@@ -97,35 +85,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 			return;
 		}
 
-		webviewView.webview.onDidReceiveMessage(async (msg) => {
-			if (msg?.type === 'openSessionLog') {
-				const logPath = path.join(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '', 'mcp_based_chat_detection_extension', 'data', 'thinking-sessions.jsonl');
-				try {
-					if (fs.existsSync(logPath)) {
-						const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(logPath));
-						vscode.window.showTextDocument(doc, { preview: false });
-					} else {
-						vscode.window.showWarningMessage(`Log file not found at ${logPath}`);
-					}
-				} catch (err) {
-					vscode.window.showErrorMessage(`Failed to open log: ${String(err)}`);
-				}
-			}
-			if (msg?.type === 'refresh') {
-				try {
-					const list = await readClientSessions(session!.sessionId, session!.protocol);
-					webviewView.webview.postMessage({ type: 'sessions', sessions: list.map((s: any) => ({
-						id: s.id,
-						title: s.title || 'Untitled task',
-						started_at: s.started_at,
-						ended_at: s.ended_at,
-						status: s.ended_at ? 'done' : 'in_progress'
-					})) });
-				} catch (err) {
-					webviewView.webview.postMessage({ type: 'error', message: `Refresh failed: ${String(err)}` });
-				}
-			}
-		});
+		// No host-side messages needed; all state handled in the webview.
 
 		// Initial load + polling
 		async function pushOnce() {
@@ -169,8 +129,6 @@ function getWebviewHtml(): string {
 			body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--fg); background: var(--bg); }
 			header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--muted); }
 			h1 { font-size: 14px; margin: 0; letter-spacing: 0.3px; }
-			button.refresh { background: transparent; color: var(--fg); border: 1px solid var(--muted); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
-			button.refresh:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
 			.list { padding: 12px; display: grid; gap: 10px; }
 			.card { border: 1px solid var(--muted); border-radius: var(--radius); padding: 12px; background: rgba(127,127,127,0.03); display: grid; gap: 6px; }
 			.title { font-size: 13px; font-weight: 600; }
@@ -178,8 +136,8 @@ function getWebviewHtml(): string {
 			.row { display: flex; align-items: center; gap: 8px; }
 			.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s infinite ease-in-out; }
 			.status { font-size: 11px; color: var(--muted); letter-spacing: 0.2px; }
-			.finish { margin-left: auto; background: var(--success); color: white; border: none; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
-			.finish:hover { filter: brightness(1.05); }
+			.ack { margin-left: auto; background: var(--success); color: white; border: none; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+			.ack:hover { filter: brightness(1.05); }
 			@keyframes pulse { 0%, 100% { opacity: .4 } 50% { opacity: 1 } }
 			.error { margin: 12px; padding: 8px 10px; border-radius: 8px; background: rgba(255,0,0,0.08); color: #ff6b6b; font-size: 12px; }
 		</style>
@@ -187,22 +145,43 @@ function getWebviewHtml(): string {
 	<body>
 		<header>
 			<h1>Thinking Sessions</h1>
-			<button class="refresh" onclick="vscode.postMessage({ type: 'refresh' })">Refresh</button>
 		</header>
 		<section class="list" id="list"></section>
 		<div id="error" class="error" style="display:none"></div>
 		<script>
 			const vscode = acquireVsCodeApi();
+			const ACK_KEY = 'thinkingLogger.acknowledgedSessionIds';
+			function loadAcked(){
+				try { return new Set(JSON.parse(localStorage.getItem(ACK_KEY) || '[]')); } catch { return new Set(); }
+			}
+			function saveAcked(set){ try { localStorage.setItem(ACK_KEY, JSON.stringify([...set])); } catch {}
+			}
+			let acked = loadAcked();
 			window.addEventListener('message', (event) => {
 				const msg = event.data;
 				if (msg.type === 'sessions') render(msg.sessions || []);
 				if (msg.type === 'error') showError(msg.message || 'Unknown error');
 			});
+			function toHuman(iso) {
+				if (!iso) return '';
+				const dt = new Date(iso);
+				if (Number.isNaN(dt.getTime())) return iso;
+				const now = new Date();
+				const diffMs = now.getTime() - dt.getTime();
+				const sec = Math.floor(diffMs / 1000);
+				if (sec < 60) return 'just now';
+				const min = Math.floor(sec / 60);
+				if (min < 60) return min + ' min ago';
+				const hr = Math.floor(min / 60);
+				if (hr < 24) return hr + ' hr ago';
+				return dt.toLocaleString();
+			}
 			function render(items) {
 				hideError();
 				const el = document.getElementById('list');
 				el.innerHTML = '';
-				for (const s of items) {
+				const visible = items.filter(s => !(s.ended_at && acked.has(s.id)));
+				for (const s of visible) {
 					const running = s.status === 'in_progress' || !s.ended_at;
 					const card = document.createElement('div');
 					card.className = 'card';
@@ -210,13 +189,15 @@ function getWebviewHtml(): string {
 						<div class=\"title\">\${escapeHtml(s.title || 'Untitled task')}<\/div>
 						<div class=\"row\">
 							\${running ? '<span class=\"dot\"><\/span><span class=\"status\">Running…<\/span>' : '<span class=\"status\">Completed<\/span>'}
-							\${running ? '' : '<button class=\"finish\">Open Log<\/button>'}
+							\${running ? '' : '<button class=\"ack\">Acknowledge<\/button>'}
 						<\/div>
-						<div class=\"meta\">Started \${escapeHtml(s.started_at || '')}\${s.ended_at ? ' • Ended ' + escapeHtml(s.ended_at) : ''}<\/div>
+						<div class=\"meta\">Started \${escapeHtml(toHuman(s.started_at))}\${s.ended_at ? ' • Ended ' + escapeHtml(toHuman(s.ended_at)) : ''}<\/div>
 					\`;
 					if (!running) {
-						card.querySelector('.finish')?.addEventListener('click', () => {
-							vscode.postMessage({ type: 'openSessionLog' });
+						card.querySelector('.ack')?.addEventListener('click', () => {
+							acked.add(s.id);
+							saveAcked(acked);
+							card.remove();
 						});
 					}
 					el.appendChild(card);
@@ -225,7 +206,6 @@ function getWebviewHtml(): string {
 			function escapeHtml(s) { return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 			function showError(text){ const e=document.getElementById('error'); e.style.display='block'; e.textContent=text }
 			function hideError(){ const e=document.getElementById('error'); e.style.display='none'; e.textContent='' }
-			vscode.postMessage({ type: 'refresh' });
 		</script>
 	</body>
 	</html>`;
