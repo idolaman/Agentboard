@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "log": "tsx scripts/log-step.ts"
   },
   "keywords": [],
   "author": "",
