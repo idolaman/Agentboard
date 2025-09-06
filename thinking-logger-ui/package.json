@@ -49,6 +49,9 @@
       { "command": "thinkingLogger.refresh", "title": "Refresh Thinking Sessions" }
     ]
   },
+  "activationEvents": [
+    "onView:thinkingLogger.sessions"
+  ],
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.89.0",

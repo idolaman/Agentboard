@@ -1,0 +1,40 @@
+{"type":"start","session":{"id":"df9b38c2-91eb-4d78-83c4-4e4a438c2e9b","started_at":"2025-09-05T15:15:34.469Z","title":"Respond to greeting","client":"local-dev-token"}}
+{"type":"end","session_id":"df9b38c2-91eb-4d78-83c4-4e4a438c2e9b","status":"ok","ended_at":"2025-09-05T15:16:02.366Z"}
+{"type":"start","session":{"id":"4c3f742c-8942-4056-9d69-e4e58b4a1c24","started_at":"2025-09-05T15:29:56.384Z","title":"Build and run sanity check for notifications flow","client":"local-dev-token"}}
+{"type":"command_before","session_id":"4c3f742c-8942-4056-9d69-e4e58b4a1c24","ts":"2025-09-05T15:29:57.960Z"}
+{"type":"command_before","session_id":"4c3f742c-8942-4056-9d69-e4e58b4a1c24","ts":"2025-09-05T15:40:28.086Z"}
+{"type":"start","session":{"id":"1cd2c6a5-a53e-4364-b50f-91dca97d1488","started_at":"2025-09-05T15:51:54.239Z","title":"Build UI, start MCP server, and verify connectivity","client":"local-dev-token"}}
+{"type":"command_before","session_id":"1cd2c6a5-a53e-4364-b50f-91dca97d1488","ts":"2025-09-05T15:51:56.001Z"}
+{"type":"command_after","session_id":"1cd2c6a5-a53e-4364-b50f-91dca97d1488","ts":"2025-09-05T15:52:04.791Z"}
+{"type":"command_before","session_id":"1cd2c6a5-a53e-4364-b50f-91dca97d1488","ts":"2025-09-05T15:52:08.469Z"}
+{"type":"command_before","session_id":"1cd2c6a5-a53e-4364-b50f-91dca97d1488","ts":"2025-09-05T15:52:18.779Z"}
+{"type":"command_after","session_id":"1cd2c6a5-a53e-4364-b50f-91dca97d1488","ts":"2025-09-05T15:52:27.182Z"}
+{"type":"end","session_id":"1cd2c6a5-a53e-4364-b50f-91dca97d1488","status":"ok","ended_at":"2025-09-05T15:52:32.870Z"}
+{"type":"start","session":{"id":"2c4c08c0-ed5a-4761-b324-3635ef844c99","started_at":"2025-09-05T15:58:22.637Z","title":"Rebuild UI after fixes","client":"local-dev-token"}}
+{"type":"command_before","session_id":"2c4c08c0-ed5a-4761-b324-3635ef844c99","ts":"2025-09-05T15:58:27.455Z"}
+{"type":"command_after","session_id":"2c4c08c0-ed5a-4761-b324-3635ef844c99","ts":"2025-09-05T15:58:40.075Z"}
+{"type":"start","session":{"id":"c7d3a824-b7b3-44ff-8be4-5547dd7bc5f8","started_at":"2025-09-05T16:15:07.628Z","title":"Run log-step script to create session","client":"local-dev-token"}}
+{"type":"command_before","session_id":"c7d3a824-b7b3-44ff-8be4-5547dd7bc5f8","ts":"2025-09-05T16:15:14.955Z"}
+{"type":"command_before","session_id":"c7d3a824-b7b3-44ff-8be4-5547dd7bc5f8","ts":"2025-09-05T16:26:21.030Z"}
+{"type":"start","session":{"id":"82757eae-a02c-4359-b46b-009c291f2cc1","started_at":"2025-09-06T10:11:52.111Z","title":"Responding to user greeting","client":"local-dev-token"}}
+{"type":"end","session_id":"82757eae-a02c-4359-b46b-009c291f2cc1","status":"ok","ended_at":"2025-09-06T10:11:58.482Z"}
+{"type":"start","session":{"id":"aaf36818-2d70-40c1-a779-713b8b5576e0","started_at":"2025-09-06T10:17:48.399Z","title":"Responding to user greeting","client":"local-dev-token"}}
+{"type":"end","session_id":"aaf36818-2d70-40c1-a779-713b8b5576e0","status":"ok","ended_at":"2025-09-06T10:17:52.824Z"}
+{"type":"start","session":{"id":"8d69792b-eaf9-41e8-81e8-2730d222e949","started_at":"2025-09-06T18:07:23.397Z","title":"Responding to repeated greeting","client":"local-dev-token"}}
+{"type":"end","session_id":"8d69792b-eaf9-41e8-81e8-2730d222e949","status":"ok","ended_at":"2025-09-06T18:07:26.244Z"}
+{"type":"start","session":{"id":"9175018a-8d9f-4b6c-9136-395809bb9e94","started_at":"2025-09-06T18:17:29.003Z","title":"Responding to third greeting","client":"local-dev-token"}}
+{"type":"end","session_id":"9175018a-8d9f-4b6c-9136-395809bb9e94","status":"ok","ended_at":"2025-09-06T18:17:32.685Z"}
+{"type":"start","session":{"id":"6b86ca73-b59c-4f98-9dc6-cc85f33fda12","started_at":"2025-09-06T18:20:51.157Z","title":"Investigate UI extension not showing sessions","client":"local-dev-token"}}
+{"type":"start","session":{"id":"7988b4b1-e4f1-47ce-8f4d-03caaf4dfd7d","started_at":"2025-09-06T18:27:00.104Z","title":"Test from CLI","client":"local-dev-token"}}
+{"type":"start","session":{"id":"8da6cadd-1ece-45ab-90ba-17a81551c61b","started_at":"2025-09-06T18:28:57.916Z","title":"Responding to user greeting","client":"local-dev-token"}}
+{"type":"end","session_id":"8da6cadd-1ece-45ab-90ba-17a81551c61b","status":"ok","ended_at":"2025-09-06T18:29:02.294Z"}
+{"type":"start","session":{"id":"4722043b-b45e-44df-8862-f55c42af1494","started_at":"2025-09-06T18:34:22.991Z","title":"Asking for clarification on user request","client":"local-dev-token"}}
+{"type":"end","session_id":"4722043b-b45e-44df-8862-f55c42af1494","status":"ok","ended_at":"2025-09-06T18:34:27.159Z"}
+{"type":"start","session":{"id":"f0f59e7a-da0d-41e9-8479-4e8ee21212ae","started_at":"2025-09-06T18:40:57.784Z","title":"Greeting user and understanding their needs","client":"local-dev-token"}}
+{"type":"end","session_id":"f0f59e7a-da0d-41e9-8479-4e8ee21212ae","status":"ok","ended_at":"2025-09-06T18:41:02.526Z"}
+{"type":"start","session":{"id":"38c5ebf3-88a9-4238-918c-81c27093a012","started_at":"2025-09-06T20:49:12.161Z","title":"Responding to user greeting","client":"local-dev-token"}}
+{"type":"end","session_id":"38c5ebf3-88a9-4238-918c-81c27093a012","status":"ok","ended_at":"2025-09-06T20:49:16.621Z"}
+{"type":"start","session":{"id":"29339c84-de87-497f-8504-ad23e2e8e568","started_at":"2025-09-06T20:49:31.540Z","title":"Responding to user thanks","client":"local-dev-token"}}
+{"type":"end","session_id":"29339c84-de87-497f-8504-ad23e2e8e568","status":"ok","ended_at":"2025-09-06T20:49:34.525Z"}
+{"type":"start","session":{"id":"f72ad1d0-4df5-482d-b1cc-15cbfa44a388","started_at":"2025-09-06T20:50:04.264Z","title":"Greeting and workspace assessment","client":"local-dev-token"}}
+{"type":"end","session_id":"f72ad1d0-4df5-482d-b1cc-15cbfa44a388","status":"ok","ended_at":"2025-09-06T20:50:09.291Z"}
