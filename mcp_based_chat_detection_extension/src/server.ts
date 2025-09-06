@@ -1,7 +1,8 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
+import { isInitializeRequest, SubscribeRequestSchema, UnsubscribeRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
+import type { Request, Response } from "express";
 import { z } from "zod";
 import fs from "node:fs";
 import path from "node:path";
@@ -40,15 +41,25 @@ function appendJSONL(obj: any) {
 }
 
 // ---- Per-session MCP server factory (supports multiple Cursor clients)
+const activeServers = new Set<McpServer>();
 function createMcpServer() {
   const mcp = new McpServer({ name: "thinking-logger", version: "0.1.0" });
+  activeServers.add(mcp);
 
   async function notifySession(sessionId: string) {
-    await mcp.server.sendResourceUpdated({ uri: `thinking://sessions/${sessionId}` });
-    await mcp.server.sendResourceListChanged();
     const s = sessions.get(sessionId);
-    if (s?.client) {
-      try { await mcp.server.sendResourceUpdated({ uri: `thinking://clients/${s.client}/sessions` }); } catch {}
+    const uris: string[] = [
+      `thinking://sessions/${sessionId}`,
+    ];
+    if (s?.client) uris.push(`thinking://clients/${s.client}/sessions`);
+    // Broadcast updates to all connected MCP servers so every UI session refreshes
+    for (const srv of activeServers) {
+      try {
+        for (const uri of uris) {
+          await srv.server.sendResourceUpdated({ uri });
+        }
+        await srv.server.sendResourceListChanged();
+      } catch {}
     }
   }
 
@@ -205,6 +216,11 @@ function createMcpServer() {
     }
   );
 
+  // Minimal subscribe/unsubscribe handlers so UIs can subscribe to resource updates
+  mcp.server.registerCapabilities({ resources: { listChanged: true, subscribe: true } });
+  mcp.server.setRequestHandler(SubscribeRequestSchema, async (_req) => ({ }));
+  mcp.server.setRequestHandler(UnsubscribeRequestSchema, async (_req) => ({ }));
+
   return mcp;
 }
 
@@ -216,7 +232,7 @@ app.use(express.json());
 const transports: Record<string, StreamableHTTPServerTransport> = {};
 
 // POST: handle initialization and JSON-RPC message flow
-app.post("/", async (req, res) => {
+app.post("/", async (req: Request, res: Response) => {
   try {
     const sessionIdHeader = req.headers["mcp-session-id"] as string | undefined;
     if (sessionIdHeader && transports[sessionIdHeader]) {
@@ -239,6 +255,7 @@ app.post("/", async (req, res) => {
 
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => crypto.randomUUID(),
+        enableJsonResponse: true,
         onsessioninitialized: (sid: string) => {
           transports[sid] = transport;
         },
@@ -263,7 +280,7 @@ app.post("/", async (req, res) => {
 });
 
 // GET: SSE stream per session
-app.get("/", async (req, res) => {
+app.get("/", async (req: Request, res: Response) => {
   const sessionIdHeader = req.headers["mcp-session-id"] as string | undefined;
   const transport = sessionIdHeader ? transports[sessionIdHeader] : undefined;
   if (!transport) {
@@ -280,7 +297,7 @@ app.get("/", async (req, res) => {
 });
 
 // DELETE: terminate a session
-app.delete("/", async (req, res) => {
+app.delete("/", async (req: Request, res: Response) => {
   const sessionIdHeader = req.headers["mcp-session-id"] as string | undefined;
   const transport = sessionIdHeader ? transports[sessionIdHeader] : undefined;
   if (!transport) {
