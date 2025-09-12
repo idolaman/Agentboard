@@ -25,6 +25,7 @@ type Session = {
   tokens_in?: number;
   tokens_out?: number;
   error?: string;
+  approval_pending_since?: string; // ISO when waiting for user approval
 };
 
 const sessions = new Map<string, Session>();
@@ -84,7 +85,7 @@ function createMcpServer() {
     async (args, extra) => {
       const clientId = String((extra as any)?.requestInfo?.headers?.["x-client-token"] ?? DEFAULT_CLIENT_TOKEN);
       const s: Session = {
-        id: uuid(),
+        id: (args as any).session_id ? String((args as any).session_id) : uuid(),
         platform: String((args as any).platform),
         started_at: now()
       };
@@ -156,6 +157,7 @@ function createMcpServer() {
       const ev = events.get(s.id) ?? [];
       ev.push({ ts, type: "start", payload: { phase: "before_command" } });
       events.set(s.id, ev);
+      s.approval_pending_since = ts;
       appendJSONL({ type: "command_before", session_id: s.id, ts });
       await notifySession(s.id);
       return { content: [{ type: "text", text: "ok" }] };
@@ -182,6 +184,7 @@ function createMcpServer() {
       const ev = events.get(s.id) ?? [];
       ev.push({ ts, type: "end", payload: { phase: "after_command" } });
       events.set(s.id, ev);
+      delete s.approval_pending_since;
       appendJSONL({ type: "command_after", session_id: s.id, ts });
       await notifySession(s.id);
       return { content: [{ type: "text", text: "ok" }] };
