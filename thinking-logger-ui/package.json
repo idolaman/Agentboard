@@ -45,9 +45,7 @@
         }
       ]
     },
-    "commands": [
-      { "command": "thinkingLogger.refresh", "title": "Refresh Thinking Sessions" }
-    ]
+    "commands": []
   },
   "activationEvents": [
     "onView:thinkingLogger.sessions"

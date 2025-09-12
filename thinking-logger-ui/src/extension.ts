@@ -124,20 +124,25 @@ function getWebviewHtml(): string {
 				--success: #2ea043;
 				--ring: rgba(0, 122, 204, 0.25);
 				--radius: 10px;
+				--card-bg: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+				--border: color-mix(in srgb, var(--muted) 45%, transparent);
 			}
 			* { box-sizing: border-box; }
-			body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--fg); background: var(--bg); }
-			header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--muted); }
-			h1 { font-size: 14px; margin: 0; letter-spacing: 0.3px; }
+			body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--fg); background: var(--bg); }
+			header { position: sticky; top: 0; z-index: 1; backdrop-filter: saturate(150%) blur(6px); background: color-mix(in srgb, var(--bg) 80%, transparent); display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+			h1 { font-size: 14px; margin: 0; letter-spacing: 0.3px; font-weight: 700; }
 			.list { padding: 12px; display: grid; gap: 10px; }
-			.card { border: 1px solid var(--muted); border-radius: var(--radius); padding: 12px; background: rgba(127,127,127,0.03); display: grid; gap: 6px; }
-			.title { font-size: 13px; font-weight: 600; }
+			.card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--card-bg); display: grid; gap: 8px; box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 8px 24px -18px rgba(0,0,0,0.4); position: relative; }
+			.title { font-size: 13px; font-weight: 650; line-height: 1.35; }
 			.meta { font-size: 11px; color: var(--muted); }
 			.row { display: flex; align-items: center; gap: 8px; }
-			.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s infinite ease-in-out; }
+			.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px rgba(127,127,127,0.08); animation: pulse 1.2s infinite ease-in-out; }
 			.status { font-size: 11px; color: var(--muted); letter-spacing: 0.2px; }
-			.ack { margin-left: auto; background: var(--success); color: white; border: none; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+			.ack { margin-left: auto; background: var(--success); color: white; border: none; border-radius: 999px; padding: 6px 12px; cursor: pointer; transition: transform 0.08s ease, filter 0.08s ease; }
 			.ack:hover { filter: brightness(1.05); }
+			.ack:active { transform: translateY(1px); }
+			.close { position: absolute; top: 8px; right: 10px; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; border: none; background: transparent; color: var(--muted); cursor: pointer; }
+			.close:hover { background: rgba(127,127,127,0.12); color: var(--fg); }
 			@keyframes pulse { 0%, 100% { opacity: .4 } 50% { opacity: 1 } }
 			.error { margin: 12px; padding: 8px 10px; border-radius: 8px; background: rgba(255,0,0,0.08); color: #ff6b6b; font-size: 12px; }
 		</style>
@@ -169,7 +174,8 @@ function getWebviewHtml(): string {
 				const now = new Date();
 				const diffMs = now.getTime() - dt.getTime();
 				const sec = Math.floor(diffMs / 1000);
-				if (sec < 60) return 'just now';
+				if (sec < 15) return 'just now';
+				if (sec < 60) return sec + ' sec ago';
 				const min = Math.floor(sec / 60);
 				if (min < 60) return min + ' min ago';
 				const hr = Math.floor(min / 60);
@@ -180,12 +186,14 @@ function getWebviewHtml(): string {
 				hideError();
 				const el = document.getElementById('list');
 				el.innerHTML = '';
-				const visible = items.filter(s => !(s.ended_at && acked.has(s.id)));
+				// Hide any session that was dismissed/acknowledged, regardless of state
+				const visible = items.filter(s => !acked.has(s.id));
 				for (const s of visible) {
 					const running = s.status === 'in_progress' || !s.ended_at;
 					const card = document.createElement('div');
 					card.className = 'card';
 					card.innerHTML = \`
+						<button class=\"close\" title=\"Dismiss\">×<\/button>
 						<div class=\"title\">\${escapeHtml(s.title || 'Untitled task')}<\/div>
 						<div class=\"row\">
 							\${running ? '<span class=\"dot\"><\/span><span class=\"status\">Running…<\/span>' : '<span class=\"status\">Completed<\/span>'}
@@ -193,6 +201,13 @@ function getWebviewHtml(): string {
 						<\/div>
 						<div class=\"meta\">Started \${escapeHtml(toHuman(s.started_at))}\${s.ended_at ? ' • Ended ' + escapeHtml(toHuman(s.ended_at)) : ''}<\/div>
 					\`;
+					// Dismiss via X: always allowed
+					card.querySelector('.close')?.addEventListener('click', () => {
+						acked.add(s.id);
+						saveAcked(acked);
+						card.remove();
+					});
+					// Acknowledge button for completed rows
 					if (!running) {
 						card.querySelector('.ack')?.addEventListener('click', () => {
 							acked.add(s.id);
