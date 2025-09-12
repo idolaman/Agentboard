@@ -165,9 +165,7 @@ function getWebviewHtml(): string {
 		</style>
 	</head>
 	<body>
-		<header>
-			<h1>Thinking Sessions</h1>
-		</header>
+		<!-- Title bar removed to align with native VS Code view heading -->
 		<section class="list" id="list"></section>
 		<div id="error" class="error" style="display:none"></div>
 		<script>
