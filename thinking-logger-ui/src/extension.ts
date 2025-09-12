@@ -97,6 +97,8 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 					started_at: s.started_at,
 					ended_at: s.ended_at,
 					platform: s.platform || 'cursor',
+					project: s.project || undefined,
+					git_branch: s.git_branch || undefined,
 					status: s.ended_at ? 'done' : 'in_progress'
 				})) });
 			} catch (err) {
@@ -137,13 +139,22 @@ function getWebviewHtml(): string {
 			.title { font-size: 13px; font-weight: 650; line-height: 1.35; }
 			.meta { font-size: 11px; color: var(--muted); }
 			.row { display: flex; align-items: center; gap: 8px; }
-			.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px rgba(127,127,127,0.08); animation: pulse 1.2s infinite ease-in-out; }
+			.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px rgba(127,127,127,0.08); }
 			.status { font-size: 11px; color: var(--muted); letter-spacing: 0.2px; }
-			.badge { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
-			.badge .i { width:14px; height:14px; border-radius:4px; display:inline-block; }
-			.i.cursor { background: linear-gradient(135deg, #48b3ff, #7c3aed); }
-			.i.chatgpt { background: linear-gradient(135deg, #10a37f, #0d7a60); }
-			.i.claude { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+			.meta-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap: wrap; }
+			.chips { display:flex; align-items:center; gap:6px; flex-wrap: wrap; }
+			.chip { display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border-radius:999px; border:1px solid var(--border); background: rgba(127,127,127,0.06); font-size:11px; color:var(--muted); }
+			.chip .dot { width:6px; height:6px; box-shadow:none; }
+			.chip.status.running .dot { background: var(--accent); animation: pulse 1.2s infinite ease-in-out; }
+			.dot.running { animation: pulse 1.2s infinite ease-in-out; }
+			.chip.status.done { color:#2ea043; border-color: color-mix(in srgb, #2ea043 40%, var(--border)); }
+			.platform.cursor .dot { background: linear-gradient(135deg, #48b3ff, #7c3aed); }
+			.platform.chatgpt .dot { background: linear-gradient(135deg, #10a37f, #0d7a60); }
+			.platform.claude .dot { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+			.time { font-size:11px; color: var(--muted); white-space: nowrap; }
+			.chip.cta { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 10%, transparent); padding:4px 10px; font-weight:600; }
+			.chip.cta:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+			.chip.cta:active { transform: translateY(1px); }
 			.ack { margin-left: auto; background: var(--success); color: white; border: none; border-radius: 999px; padding: 6px 12px; cursor: pointer; transition: transform 0.08s ease, filter 0.08s ease; }
 			.ack:hover { filter: brightness(1.05); }
 			.ack:active { transform: translateY(1px); }
@@ -202,10 +213,10 @@ function getWebviewHtml(): string {
 						<button class=\"close\" title=\"Dismiss\">×<\/button>
 						<div class=\"title\">\${escapeHtml(s.title || 'Untitled task')}<\/div>
 						<div class=\"row\">
-							\${running ? '<span class=\"dot\"><\/span><span class=\"status\">Running…<\/span>' : '<span class=\"status\">Completed<\/span>'}
-							\${running ? '' : '<button class=\"ack\">Acknowledge<\/button>'}
+							\${running ? '<span class="dot running"></span><span class="status">Running…</span>' : '<span class="status">Completed</span>'}
+							\${running ? '' : '<button class="chip cta ack">Acknowledge</button>'}
 						<\/div>
-						<div class=\"meta\"><span class=\"badge\"><span class=\"i \${s.platform==='chatgpt'?'chatgpt':(s.platform==='claude'?'claude':'cursor')}\"><\/span>\${escapeHtml(s.platform || '')}<\/span> • Started \${escapeHtml(toHuman(s.started_at))}\${s.ended_at ? ' • Ended ' + escapeHtml(toHuman(s.ended_at)) : ''}<\/div>
+						<div class=\"meta-row\">\n\t\t\t\t\t\t<div class=\"chips\">\n\t\t\t\t\t\t\t<span class=\"chip platform \${s.platform==='chatgpt'?'chatgpt':(s.platform==='claude'?'claude':'cursor')}\"><span class=\"dot\"><\/span>\${escapeHtml(s.platform || '')}<\/span>\n\t\t\t\t\t\t\t\${s.project ? '<span class=\\"chip\\">'+escapeHtml(s.project)+(s.git_branch? ' <span class=\\"status\\">@<\/span> '+escapeHtml(s.git_branch):'')+'<\/span>' : ''}\n\t\t\t\t\t\t\t<span class=\"chip status \${running?'running':'done'}\">\${running?'<span class=\\"dot\\"><\/span> In progress':'Done'}<\/span>\n\t\t\t\t\t\t<\/div>\n\t\t\t\t\t\t<div class=\"time\">Started \${escapeHtml(toHuman(s.started_at))}\${s.ended_at ? ' • Ended ' + escapeHtml(toHuman(s.ended_at)) : ''}<\/div>\n\t\t\t\t\t<\/div>
 					\`;
 					// Dismiss via X: always allowed
 					card.querySelector('.close')?.addEventListener('click', () => {
