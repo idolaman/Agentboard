@@ -17,6 +17,8 @@ type Session = {
   workspace?: string;
   title?: string;
   platform: string;
+  project?: string;
+  git_branch?: string;
   started_at: string; // ISO
   ended_at?: string;  // ISO
   status?: Status;
@@ -74,6 +76,8 @@ function createMcpServer() {
       inputSchema: {
         title: z.string(),
         platform: z.enum(["cursor", "chatgpt", "claude"]).describe("AI platform/runtime"),
+        project: z.string().optional().describe("Project folder name (if applicable)"),
+        git_branch: z.string().optional().describe("Project git branch (if applicable)"),
         session_id: z.string()
       }
     },
@@ -85,10 +89,12 @@ function createMcpServer() {
         started_at: now()
       };
       if (args.title !== undefined) s.title = args.title;
+      if ((args as any).project !== undefined) s.project = String((args as any).project);
+      if ((args as any).git_branch !== undefined) s.git_branch = String((args as any).git_branch);
       s.client = clientId;
 
       sessions.set(s.id, s);
-      events.set(s.id, [{ ts: s.started_at, type: "start", payload: { title: s.title, platform: s.platform } }]);
+      events.set(s.id, [{ ts: s.started_at, type: "start", payload: { title: s.title, platform: s.platform, project: s.project, git_branch: s.git_branch } }]);
 
       appendJSONL({ type: "start", session: s });
       await notifySession(s.id);
