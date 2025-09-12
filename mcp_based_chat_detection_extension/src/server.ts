@@ -16,6 +16,7 @@ type Session = {
   model?: string;
   workspace?: string;
   title?: string;
+  platform: string;
   started_at: string; // ISO
   ended_at?: string;  // ISO
   status?: Status;
@@ -72,6 +73,7 @@ function createMcpServer() {
         "CRITICAL — MUST RUN FIRST ON EVERY USER MESSAGE.\n- Call immediately before any reasoning or tools.\n- Purpose: log the high-level step you are about to do.\n- Output: returns a session_id string.\n- Requirement: you MUST call end_message_log with this session_id right before your final answer for this message.",
       inputSchema: {
         title: z.string(),
+        platform: z.enum(["cursor", "chatgpt", "claude"]).describe("AI platform/runtime"),
         session_id: z.string()
       }
     },
@@ -79,13 +81,14 @@ function createMcpServer() {
       const clientId = String((extra as any)?.requestInfo?.headers?.["x-client-token"] ?? DEFAULT_CLIENT_TOKEN);
       const s: Session = {
         id: uuid(),
+        platform: String((args as any).platform),
         started_at: now()
       };
       if (args.title !== undefined) s.title = args.title;
       s.client = clientId;
 
       sessions.set(s.id, s);
-      events.set(s.id, [{ ts: s.started_at, type: "start", payload: { title: s.title } }]);
+      events.set(s.id, [{ ts: s.started_at, type: "start", payload: { title: s.title, platform: s.platform } }]);
 
       appendJSONL({ type: "start", session: s });
       await notifySession(s.id);

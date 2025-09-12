@@ -96,6 +96,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 					title: s.title || 'Untitled task',
 					started_at: s.started_at,
 					ended_at: s.ended_at,
+					platform: s.platform || 'cursor',
 					status: s.ended_at ? 'done' : 'in_progress'
 				})) });
 			} catch (err) {
@@ -138,6 +139,11 @@ function getWebviewHtml(): string {
 			.row { display: flex; align-items: center; gap: 8px; }
 			.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 6px rgba(127,127,127,0.08); animation: pulse 1.2s infinite ease-in-out; }
 			.status { font-size: 11px; color: var(--muted); letter-spacing: 0.2px; }
+			.badge { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
+			.badge .i { width:14px; height:14px; border-radius:4px; display:inline-block; }
+			.i.cursor { background: linear-gradient(135deg, #48b3ff, #7c3aed); }
+			.i.chatgpt { background: linear-gradient(135deg, #10a37f, #0d7a60); }
+			.i.claude { background: linear-gradient(135deg, #f59e0b, #ef4444); }
 			.ack { margin-left: auto; background: var(--success); color: white; border: none; border-radius: 999px; padding: 6px 12px; cursor: pointer; transition: transform 0.08s ease, filter 0.08s ease; }
 			.ack:hover { filter: brightness(1.05); }
 			.ack:active { transform: translateY(1px); }
@@ -199,7 +205,7 @@ function getWebviewHtml(): string {
 							\${running ? '<span class=\"dot\"><\/span><span class=\"status\">Running…<\/span>' : '<span class=\"status\">Completed<\/span>'}
 							\${running ? '' : '<button class=\"ack\">Acknowledge<\/button>'}
 						<\/div>
-						<div class=\"meta\">Started \${escapeHtml(toHuman(s.started_at))}\${s.ended_at ? ' • Ended ' + escapeHtml(toHuman(s.ended_at)) : ''}<\/div>
+						<div class=\"meta\"><span class=\"badge\"><span class=\"i \${s.platform==='chatgpt'?'chatgpt':(s.platform==='claude'?'claude':'cursor')}\"><\/span>\${escapeHtml(s.platform || '')}<\/span> • Started \${escapeHtml(toHuman(s.started_at))}\${s.ended_at ? ' • Ended ' + escapeHtml(toHuman(s.ended_at)) : ''}<\/div>
 					\`;
 					// Dismiss via X: always allowed
 					card.querySelector('.close')?.addEventListener('click', () => {
