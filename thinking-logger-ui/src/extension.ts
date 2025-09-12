@@ -99,6 +99,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 					platform: s.platform || 'cursor',
 					project: s.project || undefined,
 					git_branch: s.git_branch || undefined,
+					approval_pending_since: s.approval_pending_since || undefined,
 					status: s.ended_at ? 'done' : 'in_progress'
 				})) });
 			} catch (err) {
@@ -125,6 +126,7 @@ function getWebviewHtml(): string {
 				--muted: var(--vscode-descriptionForeground);
 				--accent: var(--vscode-focusBorder);
 				--success: #2ea043;
+				--warning: #f59e0b;
 				--ring: rgba(0, 122, 204, 0.25);
 				--radius: 10px;
 				--card-bg: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
@@ -148,6 +150,12 @@ function getWebviewHtml(): string {
 			.chip.status.running .dot { background: var(--accent); animation: pulse 1.2s infinite ease-in-out; }
 			.dot.running { animation: pulse 1.2s infinite ease-in-out; }
 			.chip.status.done { color:#2ea043; border-color: color-mix(in srgb, #2ea043 40%, var(--border)); }
+			.chip.approval { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 40%, var(--border)); background: color-mix(in srgb, var(--warning) 12%, transparent); font-weight: 600; }
+			.chip.approval .dot { background: var(--warning); }
+			.badgeCol { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+			.subline { display:flex; align-items:center; gap:6px; font-size: 11px; color: var(--muted); overflow:hidden; }
+			.tag { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; background: rgba(127,127,127,0.08); border:1px solid var(--border); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+			.tag-branch { color: var(--fg); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 			.platform.cursor .dot { background: linear-gradient(135deg, #48b3ff, #7c3aed); }
 			.platform.chatgpt .dot { background: linear-gradient(135deg, #10a37f, #0d7a60); }
 			.platform.claude .dot { background: linear-gradient(135deg, #f59e0b, #ef4444); }
@@ -171,6 +179,7 @@ function getWebviewHtml(): string {
 		<script>
 			const vscode = acquireVsCodeApi();
 			const ACK_KEY = 'thinkingLogger.acknowledgedSessionIds';
+			const keyFor = (s) => \`\${s.id}|\${s.started_at||''}\`;
 			function loadAcked(){
 				try { return new Set(JSON.parse(localStorage.getItem(ACK_KEY) || '[]')); } catch { return new Set(); }
 			}
@@ -201,31 +210,33 @@ function getWebviewHtml(): string {
 				hideError();
 				const el = document.getElementById('list');
 				el.innerHTML = '';
-				// Hide any session that was dismissed/acknowledged, regardless of state
-				const visible = items.filter(s => !acked.has(s.id));
+				// Hide sessions dismissed for this specific run (id + started_at)
+				const visible = items.filter(s => !acked.has(keyFor(s)));
 				for (const s of visible) {
 					const running = s.status === 'in_progress' || !s.ended_at;
+					const approval = s.approval_pending_since ? (Date.now() - new Date(s.approval_pending_since).getTime() > 5000) : false;
 					const card = document.createElement('div');
 					card.className = 'card';
 					card.innerHTML = \`
-						<button class=\"close\" title=\"Dismiss\">×<\/button>
+						<button class=\"close\" title=\"Dismiss\">×</button>
 						<div class=\"title\">\${escapeHtml(s.title || 'Untitled task')}<\/div>
 						<div class=\"row\">
-							\${running ? '<span class="dot running"></span><span class="status">Running…</span>' : '<span class="status">Completed</span>'}
-							\${running ? '' : '<button class="chip cta ack">Acknowledge</button>'}
+							\${running ? '<span class=\\"dot running\\"></span><span class=\\"status\\">Running…<\/span>' : '<span class=\\"status\\">Completed<\/span>'}
+							\${approval ? '<span class=\\"chip approval\\"><span class=\\"dot\\"></span> Needs your approval<\/span>' : ''}
+							\${running ? '' : '<button class=\\"chip cta ack\\">Acknowledge<\/button>'}
 						<\/div>
-						<div class=\"meta-row\">\n\t\t\t\t\t\t<div class=\"chips\">\n\t\t\t\t\t\t\t<span class=\"chip platform \${s.platform==='chatgpt'?'chatgpt':(s.platform==='claude'?'claude':'cursor')}\"><span class=\"dot\"><\/span>\${escapeHtml(s.platform || '')}<\/span>\n\t\t\t\t\t\t\t\${s.project ? '<span class=\\"chip\\">'+escapeHtml(s.project)+(s.git_branch? ' <span class=\\"status\\">@<\/span> '+escapeHtml(s.git_branch):'')+'<\/span>' : ''}\n\t\t\t\t\t\t\t<span class=\"chip status \${running?'running':'done'}\">\${running?'<span class=\\"dot\\"><\/span> In progress':'Done'}<\/span>\n\t\t\t\t\t\t<\/div>\n\t\t\t\t\t\t<div class=\"time\">Started \${escapeHtml(toHuman(s.started_at))}\${s.ended_at ? ' • Ended ' + escapeHtml(toHuman(s.ended_at)) : ''}<\/div>\n\t\t\t\t\t<\/div>
+						<div class=\"meta-row\">\n\t\t\t\t\t<div class=\"chips\">\n\t\t\t\t\t\t<span class=\"chip platform \${s.platform==='chatgpt'?'chatgpt':(s.platform==='claude'?'claude':'cursor')}\"><span class=\"dot\"></span>\${escapeHtml(s.platform || '')}\${s.project ? ' • '+escapeHtml(s.project) : ''}\${s.git_branch ? ' @ '+escapeHtml(s.git_branch) : ''}</span>\n\t\t\t\t\t\t<span class=\"chip status \${running?'running':'done'}\">\${running?'<span class=\\\"dot\\\"></span> In progress':'Done'}</span>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"time\">Started \${escapeHtml(toHuman(s.started_at))}\${s.ended_at ? ' • Ended ' + escapeHtml(toHuman(s.ended_at)) : ''}</div>\n\t\t\t\t</div>
 					\`;
 					// Dismiss via X: always allowed
 					card.querySelector('.close')?.addEventListener('click', () => {
-						acked.add(s.id);
+						acked.add(keyFor(s));
 						saveAcked(acked);
 						card.remove();
 					});
 					// Acknowledge button for completed rows
 					if (!running) {
 						card.querySelector('.ack')?.addEventListener('click', () => {
-							acked.add(s.id);
+							acked.add(keyFor(s));
 							saveAcked(acked);
 							card.remove();
 						});
