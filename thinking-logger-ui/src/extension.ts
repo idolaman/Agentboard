@@ -20,7 +20,12 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 		webviewView.webview.options = {
 			enableScripts: true,
 		};
-		webviewView.webview.html = getWebviewHtml();
+		const icons = {
+			chatgpt: webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icons', 'chatgpt.svg')).toString(),
+			github: webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icons', 'github.svg')).toString(),
+			cursor: webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icons', 'cursor.svg')).toString(),
+		};
+		webviewView.webview.html = getWebviewHtml(icons);
 
 		// No commands; view updates automatically.
 
@@ -112,7 +117,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 	}
 }
 
-function getWebviewHtml(): string {
+function getWebviewHtml(icons: { chatgpt: string; github: string; cursor: string }): string {
 	// Minimal, clean UI using system fonts; animated status; accessible contrast
 	return `<!DOCTYPE html>
 	<html lang="en">
@@ -147,6 +152,10 @@ function getWebviewHtml(): string {
 			.chips { display:flex; align-items:center; gap:6px; flex-wrap: wrap; }
 			.chip { display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border-radius:999px; border:1px solid var(--border); background: rgba(127,127,127,0.06); font-size:11px; color:var(--muted); }
 			.chip .dot { width:6px; height:6px; box-shadow:none; }
+			.chip .icon { width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center; }
+			.chip .icon svg, .chip .icon img { width:100%; height:100%; display:block; }
+			.platform-icon { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; margin-right:12px; }
+			.platform-icon img, .platform-icon svg { width:100%; height:100%; display:block; border-radius:8px; }
 			.chip.status.running .dot { background: var(--accent); animation: pulse 1.2s infinite ease-in-out; }
 			.dot.running { animation: pulse 1.2s infinite ease-in-out; }
 			.chip.status.done { color:#2ea043; border-color: color-mix(in srgb, #2ea043 40%, var(--border)); }
@@ -156,9 +165,10 @@ function getWebviewHtml(): string {
 			.subline { display:flex; align-items:center; gap:6px; font-size: 11px; color: var(--muted); overflow:hidden; }
 			.tag { display:inline-flex; align-items:center; padding:2px 6px; border-radius:6px; background: rgba(127,127,127,0.08); border:1px solid var(--border); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 			.tag-branch { color: var(--fg); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); background: color-mix(in srgb, var(--accent) 10%, transparent); }
-			.platform.cursor .dot { background: linear-gradient(135deg, #48b3ff, #7c3aed); }
-			.platform.chatgpt .dot { background: linear-gradient(135deg, #10a37f, #0d7a60); }
-			.platform.claude .dot { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+			.platform.cursor { color: var(--fg); }
+			.platform.chatgpt { color: var(--fg); }
+			.platform.claude { color: var(--fg); }
+			.platform.github { color: var(--fg); }
 			.time { font-size:11px; color: var(--muted); white-space: nowrap; }
 			.chip.cta { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 10%, transparent); padding:4px 10px; font-weight:600; }
 			.chip.cta:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
@@ -177,6 +187,7 @@ function getWebviewHtml(): string {
 		<section class="list" id="list"></section>
 		<div id="error" class="error" style="display:none"></div>
 		<script>
+			const ICONS = { chatgpt: '${icons.chatgpt}', github: '${icons.github}', cursor: '${icons.cursor}' };
 			const vscode = acquireVsCodeApi();
 			const ACK_KEY = 'thinkingLogger.acknowledgedSessionIds';
 			const keyFor = (s) => \`\${s.id}|\${s.started_at||''}\`;
@@ -225,7 +236,7 @@ function getWebviewHtml(): string {
 							\${approval ? '<span class=\\"chip approval\\"><span class=\\"dot\\"></span> Needs your approval<\/span>' : ''}
 							\${running ? '' : '<button class=\\"chip cta ack\\">Acknowledge<\/button>'}
 						<\/div>
-						<div class=\"meta-row\">\n\t\t\t\t\t<div class=\"chips\">\n\t\t\t\t\t\t<span class=\"chip platform \${s.platform==='chatgpt'?'chatgpt':(s.platform==='claude'?'claude':'cursor')}\"><span class=\"dot\"></span>\${escapeHtml(s.platform || '')}\${s.project ? ' • '+escapeHtml(s.project) : ''}\${s.git_branch ? ' @ '+escapeHtml(s.git_branch) : ''}</span>\n\t\t\t\t\t\t<span class=\"chip status \${running?'running':'done'}\">\${running?'<span class=\\\"dot\\\"></span> In progress':'Done'}</span>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"time\">Started \${escapeHtml(toHuman(s.started_at))}\${s.ended_at ? ' • Ended ' + escapeHtml(toHuman(s.ended_at)) : ''}</div>\n\t\t\t\t</div>
+						<div class=\"meta-row\">\n\t\t\t\t\t<div class=\"chips\">\n\t\t\t\t\t\t<span class=\"platform-icon\">\${s.platform==='chatgpt' ? '<img src=\\\"'+ICONS.chatgpt+'\\\" alt=\\\"ChatGPT\\\" />' : (s.platform==='github' ? '<img src=\\\"'+ICONS.github+'\\\" alt=\\\"GitHub\\\" />' : '<img src=\\\"'+ICONS.cursor+'\\\" alt=\\\"Cursor\\\" />')}<\/span>\n\t\t\t\t\t\t\${(s.platform==='cursor' && (s.project||s.git_branch))? ('<span class=\\\"chip platform cursor\\\">'+(escapeHtml(s.project||'')) + (s.git_branch? ' @ '+escapeHtml(s.git_branch):'')+'</span>') : ''}\n\t\t\t\t\t\t<span class=\"chip status \${running?'running':'done'}\">\${running?'<span class=\\\"dot\\\"></span> In progress':'Done'}</span>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"time\">Started \${escapeHtml(toHuman(s.started_at))}\${s.ended_at ? ' • Ended ' + escapeHtml(toHuman(s.ended_at)) : ''}</div>\n\t\t\t\t</div>
 					\`;
 					// Dismiss via X: always allowed
 					card.querySelector('.close')?.addEventListener('click', () => {
