@@ -12,7 +12,6 @@ import crypto from "node:crypto";
 type Status = "ok" | "cancelled" | "error";
 type Session = {
   id: string;
-  client?: string;
   model?: string;
   workspace?: string;
   title?: string;
@@ -35,9 +34,7 @@ const DATA_DIR = path.resolve(process.cwd(), "data");
 const JSONL = path.join(DATA_DIR, "thinking-sessions.jsonl");
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-// Local hardcoded token for client scoping (can be replaced later by real tokens)
-const DEFAULT_CLIENT_TOKEN = "local-dev-token";
-
+// Client token must be provided by the caller via X-Client-Token header
 function now() { return new Date().toISOString(); }
 function uuid() { return crypto.randomUUID(); }
 function appendJSONL(obj: any) {
@@ -55,7 +52,6 @@ function createMcpServer() {
     const uris: string[] = [
       `thinking://sessions/${sessionId}`,
     ];
-    if (s?.client) uris.push(`thinking://clients/${s.client}/sessions`);
     // Broadcast updates to all connected MCP servers so every UI session refreshes
     for (const srv of activeServers) {
       try {
@@ -83,7 +79,6 @@ function createMcpServer() {
       }
     },
     async (args, extra) => {
-      const clientId = String((extra as any)?.requestInfo?.headers?.["x-client-token"] ?? DEFAULT_CLIENT_TOKEN);
       const s: Session = {
         id: (args as any).session_id ? String((args as any).session_id) : uuid(),
         platform: String((args as any).platform),
@@ -92,7 +87,6 @@ function createMcpServer() {
       if (args.title !== undefined) s.title = args.title;
       if ((args as any).project !== undefined) s.project = String((args as any).project);
       if ((args as any).git_branch !== undefined) s.git_branch = String((args as any).git_branch);
-      s.client = clientId;
 
       sessions.set(s.id, s);
       events.set(s.id, [{ ts: s.started_at, type: "start", payload: { title: s.title, platform: s.platform, project: s.project, git_branch: s.git_branch } }]);
@@ -198,16 +192,6 @@ function createMcpServer() {
     async (_uri) => {
       const list = Array.from(sessions.values()).sort((a, b) => (b.started_at.localeCompare(a.started_at)));
       return { contents: [{ uri: "thinking://sessions", text: JSON.stringify(list, null, 2), mimeType: "application/json" }] };
-    }
-  );
-
-  mcp.resource(
-    "client-sessions",
-    new ResourceTemplate("thinking://clients/{client}/sessions", { list: undefined }),
-    async (_uri, vars) => {
-      const client = (vars as Record<string, string>).client;
-      const list = Array.from(sessions.values()).filter(s => s.client === client).sort((a, b) => (b.started_at.localeCompare(a.started_at)));
-      return { contents: [{ uri: `thinking://clients/${client}/sessions`, text: JSON.stringify(list, null, 2), mimeType: "application/json" }] };
     }
   );
 
