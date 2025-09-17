@@ -152,3 +152,12 @@
 {"type":"end","session_id":"repeated_greeting_2025_09_16","status":"ok","ended_at":"2025-09-16T06:07:07.048Z"}
 {"type":"start","session":{"id":"greeting_2025_09_16_001","platform":"cursor","started_at":"2025-09-16T06:07:28.320Z","title":"Initial greeting and workspace exploration","project":"productivity-master","client":"local-dev-token"}}
 {"type":"end","session_id":"greeting_2025_09_16_001","status":"ok","ended_at":"2025-09-16T06:07:33.370Z"}
+{"type":"start","session":{"id":"b5314ec7-2d01-4e2c-b308-792f0d7ddb86","platform":"cursor","started_at":"2025-09-17T06:03:00.762Z","title":"Figure out easiest way for clients to install/run MCP server and connect with Cursor","project":"productivity-master","git_branch":"main","client":"local-dev-token"}}
+{"type":"start","session":{"id":"remove_client_token_2025-09-17","platform":"cursor","started_at":"2025-09-17T06:05:16.592Z","title":"Remove client token concept from server and UI","project":"productivity-master","git_branch":"main","client":"local-dev-token"}}
+{"type":"end","session_id":"remove_client_token_2025-09-17","status":"ok","ended_at":"2025-09-17T06:08:07.197Z"}
+{"type":"start","session":{"id":"greeting_2025_09_17_001","platform":"cursor","started_at":"2025-09-17T06:10:45.929Z","title":"Initial greeting and workspace exploration","project":"chat_detection_extension","git_branch":"main"}}
+{"type":"end","session_id":"greeting_2025_09_17_001","status":"ok","ended_at":"2025-09-17T06:10:50.752Z"}
+{"type":"start","session":{"id":"greeting_followup_2025_09_17_001","platform":"cursor","started_at":"2025-09-17T06:11:04.923Z","title":"Follow-up greeting","project":"chat_detection_extension","git_branch":"main"}}
+{"type":"end","session_id":"greeting_followup_2025_09_17_001","status":"ok","ended_at":"2025-09-17T06:11:07.651Z"}
+{"type":"start","session":{"id":"greeting_2025_09_17_001","platform":"cursor","started_at":"2025-09-17T06:11:18.576Z","title":"Initial greeting and workspace exploration","project":"chat_detection_extension","git_branch":"main"}}
+{"type":"end","session_id":"greeting_2025_09_17_001","status":"ok","ended_at":"2025-09-17T06:11:23.520Z"}

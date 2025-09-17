@@ -31,7 +31,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 
 		const cfg = vscode.workspace.getConfiguration('thinkingLogger');
 		const serverUrl = cfg.get<string>('serverUrl') || 'http://127.0.0.1:17890';
-		const clientToken = cfg.get<string>('clientToken') || 'local-dev-token';
+		// client token removed
 		// Lightweight HTTP JSON-RPC client with session handling and polling
 		async function initializeSession(): Promise<{ sessionId: string; protocol: string; }> {
 			const resp = await fetch(serverUrl, {
@@ -39,7 +39,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json, text/event-stream',
-					'X-Client-Token': clientToken,
+					// no client token
 				},
 				body: JSON.stringify({
 					jsonrpc: '2.0',
@@ -73,7 +73,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 					jsonrpc: '2.0',
 					id: 'read-sessions',
 					method: 'resources/read',
-					params: { uri: `thinking://clients/${clientToken}/sessions` }
+					params: { uri: `thinking://sessions` }
 				})
 			});
 			if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
