@@ -12,21 +12,6 @@
     "watch": "tsc -w -p ."
   },
   "contributes": {
-    "configuration": {
-      "title": "Thinking Logger",
-      "properties": {
-        "thinkingLogger.serverUrl": {
-          "type": "string",
-          "default": "http://127.0.0.1:17890",
-          "description": "Base URL of the Thinking Logger MCP server (HTTP/SSE)."
-        },
-        "thinkingLogger.clientToken": {
-          "type": "string",
-          "default": "local-dev-token",
-          "description": "Client token to scope sessions (sent as X-Client-Token)."
-        }
-      }
-    },
     "viewsContainers": {
       "activitybar": [
         {
@@ -36,20 +21,28 @@
         }
       ]
     },
+    "configuration": {
+      "title": "Thinking Logger",
+      "properties": {
+        "thinkingLogger.serverUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:17890",
+          "description": "Base URL of the Thinking Logger MCP server (HTTP/SSE)."
+        }
+      }
+    },
     "views": {
       "thinkingLogger": [
         {
           "type": "webview",
           "id": "thinkingLogger.sessions",
-          "name": "Sessions"
+          "name": "Thinking Sessions"
         }
       ]
     },
     "commands": []
   },
-  "activationEvents": [
-    "onView:thinkingLogger.sessions"
-  ],
+  
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.89.0",
