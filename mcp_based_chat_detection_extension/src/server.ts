@@ -4,11 +4,8 @@ import { isInitializeRequest, SubscribeRequestSchema, UnsubscribeRequestSchema }
 import express from "express";
 import type { Request, Response } from "express";
 import { z } from "zod";
-import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
 
-// ---- tiny storage (in-memory + JSONL append for durability)
 type Status = "ok" | "cancelled" | "error";
 type Session = {
   id: string;
@@ -30,18 +27,9 @@ type Session = {
 const sessions = new Map<string, Session>();
 const events = new Map<string, Array<{ ts: string; type: "start" | "end"; payload?: any }>>();
 
-const DATA_DIR = path.resolve(process.cwd(), "data");
-const JSONL = path.join(DATA_DIR, "thinking-sessions.jsonl");
-fs.mkdirSync(DATA_DIR, { recursive: true });
-
-// Client token must be provided by the caller via X-Client-Token header
 function now() { return new Date().toISOString(); }
 function uuid() { return crypto.randomUUID(); }
-function appendJSONL(obj: any) {
-  fs.appendFileSync(JSONL, JSON.stringify(obj) + "\n", "utf8");
-}
 
-// ---- Per-session MCP server factory (supports multiple Cursor clients)
 const activeServers = new Set<McpServer>();
 function createMcpServer() {
   const mcp = new McpServer({ name: "thinking-logger", version: "0.1.0" });
@@ -50,6 +38,7 @@ function createMcpServer() {
   async function notifySession(sessionId: string) {
     const s = sessions.get(sessionId);
     const uris: string[] = [
+      `thinking://sessions`,
       `thinking://sessions/${sessionId}`,
     ];
     // Broadcast updates to all connected MCP servers so every UI session refreshes
@@ -91,7 +80,6 @@ function createMcpServer() {
       sessions.set(s.id, s);
       events.set(s.id, [{ ts: s.started_at, type: "start", payload: { title: s.title, platform: s.platform, project: s.project, git_branch: s.git_branch } }]);
 
-      appendJSONL({ type: "start", session: s });
       await notifySession(s.id);
 
       return { content: [{ type: "text", text: s.id }] };
@@ -124,7 +112,6 @@ function createMcpServer() {
       ev.push({ ts: s.ended_at, type: "end", payload: { status: s.status, tokens_in: s.tokens_in, tokens_out: s.tokens_out, error: s.error } });
       events.set(s.id, ev);
 
-      appendJSONL({ type: "end", session_id: s.id, status: s.status, ended_at: s.ended_at, tokens_in: s.tokens_in, tokens_out: s.tokens_out, error: s.error });
       await notifySession(s.id);
 
       return { content: [{ type: "text", text: "ok" }] };
@@ -152,7 +139,6 @@ function createMcpServer() {
       ev.push({ ts, type: "start", payload: { phase: "before_command" } });
       events.set(s.id, ev);
       s.approval_pending_since = ts;
-      appendJSONL({ type: "command_before", session_id: s.id, ts });
       await notifySession(s.id);
       return { content: [{ type: "text", text: "ok" }] };
     }
@@ -179,7 +165,6 @@ function createMcpServer() {
       ev.push({ ts, type: "end", payload: { phase: "after_command" } });
       events.set(s.id, ev);
       delete s.approval_pending_since;
-      appendJSONL({ type: "command_after", session_id: s.id, ts });
       await notifySession(s.id);
       return { content: [{ type: "text", text: "ok" }] };
     }
