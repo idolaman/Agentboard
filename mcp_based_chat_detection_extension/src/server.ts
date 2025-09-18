@@ -1,4 +1,4 @@
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest, SubscribeRequestSchema, UnsubscribeRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
@@ -25,7 +25,6 @@ type Session = {
 };
 
 const sessions = new Map<string, Session>();
-const events = new Map<string, Array<{ ts: string; type: "start" | "end"; payload?: any }>>();
 
 function now() { return new Date().toISOString(); }
 function uuid() { return crypto.randomUUID(); }
@@ -36,10 +35,8 @@ function createMcpServer() {
   activeServers.add(mcp);
 
   async function notifySession(sessionId: string) {
-    const s = sessions.get(sessionId);
     const uris: string[] = [
       `thinking://sessions`,
-      `thinking://sessions/${sessionId}`,
     ];
     // Broadcast updates to all connected MCP servers so every UI session refreshes
     for (const srv of activeServers) {
@@ -78,7 +75,6 @@ function createMcpServer() {
       if ((args as any).git_branch !== undefined) s.git_branch = String((args as any).git_branch);
 
       sessions.set(s.id, s);
-      events.set(s.id, [{ ts: s.started_at, type: "start", payload: { title: s.title, platform: s.platform, project: s.project, git_branch: s.git_branch } }]);
 
       await notifySession(s.id);
 
@@ -108,9 +104,6 @@ function createMcpServer() {
       s.status = args.status;
       if (args.error) s.error = args.error;
 
-      const ev = events.get(s.id) ?? [];
-      ev.push({ ts: s.ended_at, type: "end", payload: { status: s.status, tokens_in: s.tokens_in, tokens_out: s.tokens_out, error: s.error } });
-      events.set(s.id, ev);
 
       await notifySession(s.id);
 
@@ -135,9 +128,6 @@ function createMcpServer() {
         return { content: [{ type: "text", text: "unknown session_id (ignored)" }] };
       }
       const ts = now();
-      const ev = events.get(s.id) ?? [];
-      ev.push({ ts, type: "start", payload: { phase: "before_command" } });
-      events.set(s.id, ev);
       s.approval_pending_since = ts;
       await notifySession(s.id);
       return { content: [{ type: "text", text: "ok" }] };
@@ -161,16 +151,12 @@ function createMcpServer() {
         return { content: [{ type: "text", text: "unknown session_id (ignored)" }] };
       }
       const ts = now();
-      const ev = events.get(s.id) ?? [];
-      ev.push({ ts, type: "end", payload: { phase: "after_command" } });
-      events.set(s.id, ev);
       delete s.approval_pending_since;
       await notifySession(s.id);
       return { content: [{ type: "text", text: "ok" }] };
     }
   );
 
-// RESOURCES: index + per-session timeline (for future UI / quick inspection)
   mcp.resource(
     "sessions-index",
     "thinking://sessions",
@@ -180,27 +166,7 @@ function createMcpServer() {
     }
   );
 
-  mcp.resource(
-    "sessions-item",
-    new ResourceTemplate("thinking://sessions/{id}", { list: undefined }),
-    async (_uri, vars) => {
-      const id = (vars as Record<string, string>).id;
-      const s = id ? sessions.get(id) : undefined;
-      const tl = id ? (events.get(id) ?? []) : [];
-      return {
-        contents: [{
-          uri: `thinking://sessions/${id}`,
-          text: JSON.stringify({ session: s ?? null, timeline: tl }, null, 2),
-          mimeType: "application/json"
-        }]
-      };
-    }
-  );
-
-  // Minimal subscribe/unsubscribe handlers so UIs can subscribe to resource updates
-  mcp.server.registerCapabilities({ resources: { listChanged: true, subscribe: true } });
-  mcp.server.setRequestHandler(SubscribeRequestSchema, async (_req) => ({ }));
-  mcp.server.setRequestHandler(UnsubscribeRequestSchema, async (_req) => ({ }));
+  mcp.server.registerCapabilities({ resources: { listChanged: true } });
 
   return mcp;
 }
