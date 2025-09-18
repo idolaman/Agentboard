@@ -3,6 +3,10 @@ node_modules/
 
 # TypeScript build output
 out/
+*.js
+*.js.map
+*.d.ts
+*.d.ts.map
 
 # VS Code extension package
 *.vsix
