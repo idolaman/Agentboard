@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-// We avoid the SDK in the UI to prevent SSE/stream polyfills in the extension host.
-// Use simple HTTP JSON-RPC with polling instead.
 
 export function activate(context: vscode.ExtensionContext) {
 	const panel = vscode.window.registerWebviewViewProvider(
@@ -27,19 +25,14 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 		};
 		webviewView.webview.html = getWebviewHtml(icons);
 
-		// No commands; view updates automatically.
-
 		const cfg = vscode.workspace.getConfiguration('thinkingLogger');
 		const serverUrl = cfg.get<string>('serverUrl') || 'http://127.0.0.1:17890';
-		// client token removed
-		// Lightweight HTTP JSON-RPC client with session handling and polling
 		async function initializeSession(): Promise<{ sessionId: string; protocol: string; }> {
 			const resp = await fetch(serverUrl, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json, text/event-stream',
-					// no client token
 				},
 				body: JSON.stringify({
 					jsonrpc: '2.0',
@@ -90,9 +83,6 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 			return;
 		}
 
-		// No host-side messages needed; all state handled in the webview.
-
-		// Initial load + polling
 		async function pushOnce() {
 			try {
 				const list = await readClientSessions(session!.sessionId, session!.protocol);
