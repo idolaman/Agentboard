@@ -49,6 +49,14 @@ This repo contains two pieces that work together:
 
 - UI extension setting `thinkingLogger.serverUrl` (default `http://127.0.0.1:17890`) controls which MCP server to read from.
 
+### Roadmap
+
+**Coming Soon:**
+- 📦 VS Code Marketplace publishing — install with one click
+- 🌐 Web ChatGPT support — track sessions from browser-based ChatGPT
+- 📊 Session analytics — tokens, duration, and performance metrics
+- 🔗 Deep linking — jump directly to specific sessions or errors
+
 ### License
 
 This project is open‑source under the GPL‑3.0 license. See `LICENSE.md` for full terms.
