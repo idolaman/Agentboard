@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./docs/agentboard-screenshot.png" alt="Agentboard sessions sidebar showing running tasks, approvals, and completions" width="100%" />
+  <img src="./docs/image01.jpg" alt="Agentboard sessions sidebar showing running tasks, approvals, and completions" width="100%" />
 </p>
 
 ## Agentboard — All your running AI tasks, inside your IDE
