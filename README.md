@@ -51,11 +51,10 @@ This repo contains two pieces that work together:
 
 ### Roadmap
 
-**Coming Soon:**
-- 📦 VS Code Marketplace publishing — install with one click
-- 🌐 Web ChatGPT support — track sessions from browser-based ChatGPT
-- 📊 Session analytics — tokens, duration, and performance metrics
-- 🔗 Deep linking — jump directly to specific sessions or errors
+- VS Code Marketplace distribution
+- Web ChatGPT integration
+- Session analytics (tokens, duration, performance)
+- Deep linking to specific sessions
 
 ### License
 
