@@ -1,7 +1,7 @@
 {
   "name": "thinking-logger-view",
   "displayName": "Thinking Logger View",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "description": "A Cursor/VS Code sidebar to visualize thinking sessions from the MCP server.",
   "publisher": "idolaman",
