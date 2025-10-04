@@ -1,12 +1,21 @@
 {
   "name": "thinking-logger-view",
   "displayName": "Thinking Logger View",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "A Cursor/VS Code sidebar to visualize thinking sessions from the MCP server.",
-  "publisher": "local",
+  "publisher": "idolaman",
   "engines": { "vscode": "^1.89.0" },
   "main": "./dist/extension.js",
+  "activationEvents": [
+    "onView:thinkingLogger.sessions"
+  ],
+  "license": "GPL-3.0-only",
+  "categories": ["Other"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/idolavi/productivity-master"
+  },
   "scripts": {
     "build": "tsc -p .",
     "watch": "tsc -w -p ."
