@@ -1,5 +1,3 @@
-![Agentboard sessions sidebar showing running tasks, approvals, and completions](media/screenshot.png)
-
 ## Agentboard — All your running AI tasks, inside your IDE
 
 Agentboard gives you a unified, real‑time view of your AI agent's work without leaving your editor. See active tasks, approvals waiting on you, and recent completions, right in a lightweight sidebar.
