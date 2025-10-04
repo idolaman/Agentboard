@@ -1,8 +1,10 @@
+![Agentboard sessions sidebar showing running tasks, approvals, and completions](media/screenshot.jpg)
+
 ## Agentboard — All your running AI tasks, inside your IDE
 
 Agentboard gives you a unified, real‑time view of your AI agent's work without leaving your editor. See active tasks, approvals waiting on you, and recent completions, right in a lightweight sidebar.
 
-This repo contains two pieces that work together:
+This repo contains two pieces that work together (GitHub mirror: https://github.com/idolaman/Agentboard):
 
 - `mcp_based_chat_detection_extension`: an MCP HTTP/SSE server that tracks and exposes thinking sessions.
 - `thinking-logger-ui`: a VS Code/Cursor sidebar extension that visualizes those sessions.

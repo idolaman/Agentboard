@@ -1,0 +1,15 @@
+# Files and folders to exclude from the VSIX
+**/.git/**
+**/.github/**
+**/.vscode/**
+**/.DS_Store
+node_modules/**
+src/**
+tsconfig.json
+
+# Explicitly include runtime assets and docs
+!media/**
+!dist/**
+!README.md
+!LICENSE.md
+!package.json
