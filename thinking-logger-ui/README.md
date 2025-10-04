@@ -1,4 +1,4 @@
-![Agentboard sessions sidebar showing running tasks, approvals, and completions](media/screenshot.jpg)
+![Agentboard sessions sidebar showing running tasks, approvals, and completions](media/screenshot.png)
 
 ## Agentboard — All your running AI tasks, inside your IDE
 
