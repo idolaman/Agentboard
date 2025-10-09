@@ -22,6 +22,8 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 			chatgpt: webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icons', 'chatgpt.svg')).toString(),
 			github: webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icons', 'github.svg')).toString(),
 			cursor: webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icons', 'cursor.svg')).toString(),
+			claude: webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icons', 'claudeicon.png')).toString(),
+			vscode: webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icons', 'vscode.jpeg')).toString(),
 		};
 		webviewView.webview.html = getWebviewHtml(icons);
 
@@ -107,7 +109,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 	}
 }
 
-function getWebviewHtml(icons: { chatgpt: string; github: string; cursor: string }): string {
+function getWebviewHtml(icons: { chatgpt: string; github: string; cursor: string; claude: string; vscode: string }): string {
 	// Minimal, clean UI using system fonts; animated status; accessible contrast
 	return `<!DOCTYPE html>
 	<html lang="en">
@@ -159,6 +161,7 @@ function getWebviewHtml(icons: { chatgpt: string; github: string; cursor: string
 			.platform.chatgpt { color: var(--fg); }
 			.platform.claude { color: var(--fg); }
 			.platform.github { color: var(--fg); }
+			.platform.vscode { color: var(--fg); }
 			.time { font-size:11px; color: var(--muted); white-space: nowrap; }
 			.chip.cta { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 10%, transparent); padding:4px 10px; font-weight:600; }
 			.chip.cta:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
@@ -177,7 +180,7 @@ function getWebviewHtml(icons: { chatgpt: string; github: string; cursor: string
 		<section class="list" id="list"></section>
 		<div id="error" class="error" style="display:none"></div>
 		<script>
-			const ICONS = { chatgpt: '${icons.chatgpt}', github: '${icons.github}', cursor: '${icons.cursor}' };
+			const ICONS = { chatgpt: '${icons.chatgpt}', github: '${icons.github}', cursor: '${icons.cursor}', claude: '${icons.claude}', vscode: '${icons.vscode}' };
 			const vscode = acquireVsCodeApi();
 			const ACK_KEY = 'thinkingLogger.acknowledgedSessionIds';
 			const keyFor = (s) => \`\${s.id}|\${s.started_at||''}\`;
@@ -226,7 +229,8 @@ function getWebviewHtml(icons: { chatgpt: string; github: string; cursor: string
 							\${approval ? '<span class=\\"chip approval\\"><span class=\\"dot\\"></span> Needs your approval<\/span>' : ''}
 							\${running ? '' : '<button class=\\"chip cta ack\\">Acknowledge<\/button>'}
 						<\/div>
-						<div class=\"meta-row\">\n\t\t\t\t\t<div class=\"chips\">\n\t\t\t\t\t\t<span class=\"platform-icon\">\${s.platform==='chatgpt' ? '<img src=\\\"'+ICONS.chatgpt+'\\\" alt=\\\"ChatGPT\\\" />' : (s.platform==='github' ? '<img src=\\\"'+ICONS.github+'\\\" alt=\\\"GitHub\\\" />' : '<img src=\\\"'+ICONS.cursor+'\\\" alt=\\\"Cursor\\\" />')}<\/span>\n\t\t\t\t\t\t\${(s.platform==='cursor' && (s.project||s.git_branch))? ('<span class=\\\"chip platform cursor\\\">'+(escapeHtml(s.project||'')) + (s.git_branch? ' @ '+escapeHtml(s.git_branch):'')+'</span>') : ''}\n\t\t\t\t\t\t<span class=\"chip status \${running?'running':'done'}\">\${running?'<span class=\\\"dot\\\"></span> In progress':'Done'}</span>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"time\">Started \${escapeHtml(toHuman(s.started_at))}\${s.ended_at ? ' • Ended ' + escapeHtml(toHuman(s.ended_at)) : ''}</div>\n\t\t\t\t</div>
+						<div class=\"meta-row\">\n\t\t\t\t\t<div class=\"chips\">\n\t\t\t\t\t\t\t\t\t<span class=\"platform-icon\">\${s.platform==='chatgpt' ? '<img src=\\"'+ICONS.chatgpt+'\\" alt=\\"ChatGPT\\" />' : (s.platform==='github' ? '<img src=\\"'+ICONS.github+'\\" alt=\\"GitHub\\" />' : (s.platform==='claude' ? '<img src=\\"'+ICONS.claude+'\\" alt=\\"Claude\\" />' : (s.platform==='vscode' ? '<img src=\\"'+ICONS.vscode+'\\" alt=\\"VS Code\\" />' : '<img src=\\"'+ICONS.cursor+'\\" alt=\\"Cursor\\" />')))}<\/span>\n\t\t\t\t\t\t\t\t\t\${((s.platform==='cursor'||s.platform==='vscode') && (s.project||s.git_branch))? ('<span class=\\"chip platform '+(s.platform==='vscode'?'vscode':'cursor')+'\\\">'+(escapeHtml(s.project||'')) + (s.git_branch? ' @ '+escapeHtml(s.git_branch):'')+'</span>') : ''}\n\t\t\t\t\t\t\t\t\t<span class=\"chip status \${running?'running':'done'}\">\${running?'<span class=\\"dot\\"></span> In progress':'Done'}</span>
+					</div>
 					\`;
 					// Dismiss via X: always allowed
 					card.querySelector('.close')?.addEventListener('click', () => {

@@ -24,3 +24,4 @@ state.vscdb
 venv/
 dist/
 .sense
+.load
