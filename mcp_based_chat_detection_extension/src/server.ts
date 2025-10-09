@@ -58,7 +58,7 @@ function createMcpServer() {
         "CRITICAL — MUST RUN FIRST ON EVERY USER MESSAGE.\n- Call immediately before any reasoning or tools.\n- Purpose: log the high-level step you are about to do.\n- Output: returns a session_id string.\n- Requirement: you MUST call end_message_log with this session_id right before your final answer for this message.",
       inputSchema: {
         title: z.string(),
-        platform: z.enum(["cursor", "chatgpt", "claude"]).describe("AI platform/runtime"),
+        platform: z.enum(["cursor", "chatgpt", "claude", "github", "vscode"]).describe("AI platform/runtime"),
         project: z.string().optional().describe("Project folder name (if applicable)"),
         git_branch: z.string().optional().describe("Project git branch (if applicable)"),
         session_id: z.string()
