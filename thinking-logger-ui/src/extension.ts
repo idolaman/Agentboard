@@ -1,20 +1,47 @@
 import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
-	const panel = vscode.window.registerWebviewViewProvider(
+	const provider = new SessionsViewProvider(context);
+	const registration = vscode.window.registerWebviewViewProvider(
 		'thinkingLogger.sessions',
-		new SessionsViewProvider(context)
+		provider
 	);
+	const clearCmd = vscode.commands.registerCommand('thinkingLogger.clearToken', async () => {
+		await provider.clearToken();
+	});
 
-	context.subscriptions.push(panel);
+	context.subscriptions.push(registration, clearCmd);
 }
 
 export function deactivate() {}
 
 class SessionsViewProvider implements vscode.WebviewViewProvider {
+    private currentView: vscode.WebviewView | undefined;
+    private pollTimer: ReturnType<typeof setInterval> | undefined;
+    private lastRenderKey: string | undefined;
+    private pollGeneration: number = 0;
+    private activeToken: string | undefined;
 	constructor(private readonly context: vscode.ExtensionContext) {}
 
+    private stopPolling(): void {
+        if (this.pollTimer) {
+            clearInterval(this.pollTimer);
+            this.pollTimer = undefined;
+        }
+    }
+
+    async clearToken(): Promise<void> {
+        await this.context.secrets.delete('thinkingLogger.token');
+        if (this.currentView) {
+            await this.resolveWebviewView(this.currentView);
+        }
+    }
+
 	async resolveWebviewView(webviewView: vscode.WebviewView): Promise<void> {
+		this.currentView = webviewView;
+		// Ensure any previous polling loop is stopped (e.g., after token change)
+		this.stopPolling();
+		this.lastRenderKey = undefined;
 		webviewView.webview.options = {
 			enableScripts: true,
 		};
@@ -25,7 +52,23 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 			claude: webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icons', 'claudeicon.png')).toString(),
 			vscode: webviewView.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media', 'icons', 'vscode.jpeg')).toString(),
 		};
-		webviewView.webview.html = getWebviewHtml(icons);
+		// Load token from SecretStorage
+		const token = await this.context.secrets.get('thinkingLogger.token');
+		// Track current token so we can cancel stale polling loops
+		this.activeToken = token || undefined;
+		if (!token) {
+			// Clear any currently rendered content to avoid stale UI flicker
+			webviewView.webview.html = getSetupHtml();
+			this.stopPolling();
+			webviewView.webview.onDidReceiveMessage(async (msg) => {
+				if (msg?.type === 'saveToken' && typeof msg.token === 'string' && msg.token.trim()) {
+					await this.context.secrets.store('thinkingLogger.token', msg.token.trim());
+					await this.resolveWebviewView(webviewView);
+				}
+			});
+			return;
+		}
+		webviewView.webview.html = getWebviewHtml(icons, token);
 
 		const cfg = vscode.workspace.getConfiguration('thinkingLogger');
 		const serverUrl = cfg.get<string>('serverUrl') || 'http://127.0.0.1:17890';
@@ -35,6 +78,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json, text/event-stream',
+					'Authorization': `Bearer ${token}`,
 				},
 				body: JSON.stringify({
 					jsonrpc: '2.0',
@@ -63,12 +107,13 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 					'Accept': 'application/json, text/event-stream',
 					'mcp-session-id': sessionId,
 					'mcp-protocol-version': protocol,
+					'Authorization': `Bearer ${token}`,
 				},
 				body: JSON.stringify({
 					jsonrpc: '2.0',
 					id: 'read-sessions',
 					method: 'resources/read',
-					params: { uri: `thinking://sessions` }
+					params: { uri: `thinking://sessions?token=${encodeURIComponent(token as string)}` }
 				})
 			});
 			if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -85,9 +130,25 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 			return;
 		}
 
+		// Capture a generation and token snapshot for this render cycle
+		const myGen = ++this.pollGeneration;
+		const myToken = token;
+		let lastKey: string | undefined;
+		function computeKey(items: any[]): string {
+			// Only pick stable fields to determine if UI meaningfully changed
+			const minimal = items.map((s: any) => ({ id: s.id, started_at: s.started_at, ended_at: s.ended_at, title: s.title, status: s.status }));
+			return token + '|' + JSON.stringify(minimal);
+		}
+
 		async function pushOnce() {
+			// If a newer resolve cycle started or token changed, abandon this poller
+			if (myGen !== (webviewView as any)._pollGen && (webviewView as any)._pollGen !== undefined) return;
+			if (myToken !== (webviewView as any)._activeToken) return;
 			try {
 				const list = await readClientSessions(session!.sessionId, session!.protocol);
+				const key = computeKey(list);
+				if (key === lastKey) return; // avoid re-render flicker when nothing changed
+				lastKey = key;
 				webviewView.webview.postMessage({ type: 'sessions', sessions: list.map((s: any) => ({
 					id: s.id,
 					title: s.title || 'Untitled task',
@@ -103,13 +164,20 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 				webviewView.webview.postMessage({ type: 'error', message: `Load failed: ${String(err)}` });
 			}
 		}
+		// Store generation + token on the view for cross-checking in pushOnce
+		(webviewView as any)._pollGen = myGen;
+		(webviewView as any)._activeToken = myToken;
 		await pushOnce();
-		const timer = setInterval(() => { void pushOnce(); }, 1500);
-		webviewView.onDidDispose(() => clearInterval(timer));
+		this.pollTimer = setInterval(() => { void pushOnce(); }, 1500);
+		webviewView.onDidDispose(() => {
+			this.stopPolling();
+			(webviewView as any)._pollGen = undefined;
+			(webviewView as any)._activeToken = undefined;
+		});
 	}
 }
 
-function getWebviewHtml(icons: { chatgpt: string; github: string; cursor: string; claude: string; vscode: string }): string {
+function getWebviewHtml(icons: { chatgpt: string; github: string; cursor: string; claude: string; vscode: string }, token: string): string {
 	// Minimal, clean UI using system fonts; animated status; accessible contrast
 	return `<!DOCTYPE html>
 	<html lang="en">
@@ -183,6 +251,7 @@ function getWebviewHtml(icons: { chatgpt: string; github: string; cursor: string
 			const ICONS = { chatgpt: '${icons.chatgpt}', github: '${icons.github}', cursor: '${icons.cursor}', claude: '${icons.claude}', vscode: '${icons.vscode}' };
 			const vscode = acquireVsCodeApi();
 			const ACK_KEY = 'thinkingLogger.acknowledgedSessionIds';
+			const TOKEN = '${token.replace(/\\/g, "\\\\").replace(/`/g, "\\`")}'
 			const keyFor = (s) => \`\${s.id}|\${s.started_at||''}\`;
 			function loadAcked(){
 				try { return new Set(JSON.parse(localStorage.getItem(ACK_KEY) || '[]')); } catch { return new Set(); }
@@ -252,6 +321,45 @@ function getWebviewHtml(icons: { chatgpt: string; github: string; cursor: string
 			function escapeHtml(s) { return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 			function showError(text){ const e=document.getElementById('error'); e.style.display='block'; e.textContent=text }
 			function hideError(){ const e=document.getElementById('error'); e.style.display='none'; e.textContent='' }
+		</script>
+	</body>
+	</html>`;
+}
+
+function getSetupHtml(): string {
+	return `<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<style>
+			body { margin: 0; padding: 16px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+			.container { display: grid; gap: 12px; }
+			label { font-size: 12px; color: #888; }
+			input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; }
+			button { padding: 8px 12px; border-radius: 8px; border: none; background: #0a84ff; color: white; cursor: pointer; }
+			button:disabled { opacity: .6; cursor: default; }
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h3>Thinking Logger – Enter Token</h3>
+			<p>Paste the token you generated on the web page to view your sessions.</p>
+			<label for="t">Token</label>
+			<input id="t" type="password" placeholder="Your token" />
+			<div>
+				<button id="s" disabled>Save token</button>
+			</div>
+		</div>
+		<script>
+			const vscode = acquireVsCodeApi();
+			const el = document.getElementById('t');
+			const btn = document.getElementById('s');
+			el.addEventListener('input', () => { btn.disabled = !String(el.value||'').trim(); });
+			btn.addEventListener('click', () => {
+				const token = String(el.value||'').trim();
+				if (token) vscode.postMessage({ type: 'saveToken', token });
+			});
 		</script>
 	</body>
 	</html>`;
