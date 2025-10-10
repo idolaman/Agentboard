@@ -22,6 +22,7 @@ type Session = {
   tokens_out?: number;
   error?: string;
   approval_pending_since?: string; // ISO when waiting for user approval
+  token?: string; // Optional per-user token to scope visibility
 };
 
 const sessions = new Map<string, Session>();
@@ -29,17 +30,72 @@ const sessions = new Map<string, Session>();
 function now() { return new Date().toISOString(); }
 function uuid() { return crypto.randomUUID(); }
 
+// Track token associations and registered resources per MCP server instance
+const serverToToken = new WeakMap<McpServer, string>();
+const registeredTokenUris = new WeakMap<McpServer, Set<string>>();
+const sessionIdToServer: Record<string, McpServer> = {};
+const sessionIdToToken: Record<string, string> = {};
+
+function readTokenFromHeaders(headers: Request["headers"]): string | undefined {
+  const auth = headers["authorization"];
+  if (typeof auth === "string" && auth.startsWith("Bearer ")) {
+    const v = auth.slice(7).trim();
+    if (v) return v;
+  }
+  const headerNames = ["x-thinking-token", "thinking-token", "mcp-token"] as const;
+  for (const name of headerNames) {
+    const raw = headers[name as keyof Request["headers"]] as any;
+    if (Array.isArray(raw)) {
+      if (raw[0] && typeof raw[0] === "string") return raw[0];
+    } else if (typeof raw === "string" && raw) {
+      return raw;
+    }
+  }
+  return undefined;
+}
+
+function registerTokenResource(mcp: McpServer, token: string): void {
+  const uri = `thinking://sessions?token=${encodeURIComponent(token)}`;
+  let set = registeredTokenUris.get(mcp);
+  if (!set) {
+    set = new Set<string>();
+    registeredTokenUris.set(mcp, set);
+  }
+  if (set.has(uri)) return;
+
+  // Use a short stable id derived from token
+  const id = `sessions-index-${crypto.createHash("sha256").update(token).digest("hex").slice(0, 8)}`;
+  mcp.resource(
+    id,
+    uri,
+    async (_uri) => {
+      const list = Array.from(sessions.values())
+        .filter((s) => s.token === token)
+        .sort((a, b) => (b.started_at.localeCompare(a.started_at)));
+      return { contents: [{ uri, text: JSON.stringify(list, null, 2), mimeType: "application/json" }] };
+    }
+  );
+  set.add(uri);
+  // Notify this client that new resources are available
+  void mcp.server.sendResourceListChanged();
+}
+
 const activeServers = new Set<McpServer>();
 function createMcpServer() {
   const mcp = new McpServer({ name: "thinking-logger", version: "0.1.0" });
   activeServers.add(mcp);
 
   async function notifySession(sessionId: string) {
-    const uris: string[] = [
-      `thinking://sessions`,
-    ];
+    const uris: string[] = [];
+    const s = sessions.get(sessionId);
+    if (s?.token) {
+      uris.push(`thinking://sessions?token=${encodeURIComponent(s.token)}`);
+    }
     // Broadcast updates to all connected MCP servers so every UI session refreshes
     for (const srv of activeServers) {
+      // Only notify servers bound to the same token to avoid cross-tenant leakage
+      const srvToken = serverToToken.get(srv);
+      if (s?.token && srvToken !== s.token) continue;
       try {
         for (const uri of uris) {
           await srv.server.sendResourceUpdated({ uri });
@@ -73,6 +129,10 @@ function createMcpServer() {
       if (args.title !== undefined) s.title = args.title;
       if ((args as any).project !== undefined) s.project = String((args as any).project);
       if ((args as any).git_branch !== undefined) s.git_branch = String((args as any).git_branch);
+
+      // Attach token if this MCP server instance has one associated
+      const tok = serverToToken.get(mcp);
+      if (tok) s.token = tok;
 
       sessions.set(s.id, s);
 
@@ -160,9 +220,15 @@ function createMcpServer() {
   mcp.resource(
     "sessions-index",
     "thinking://sessions",
-    async (_uri) => {
-      const list = Array.from(sessions.values()).sort((a, b) => (b.started_at.localeCompare(a.started_at)));
-      return { contents: [{ uri: "thinking://sessions", text: JSON.stringify(list, null, 2), mimeType: "application/json" }] };
+    async (_uri: URL) => {
+      // Without a token, return an empty list to avoid leaking data
+      const boundToken = serverToToken.get(mcp);
+      const list = boundToken
+        ? Array.from(sessions.values())
+            .filter((s) => s.token === boundToken)
+            .sort((a, b) => (b.started_at.localeCompare(a.started_at)))
+        : [];
+      return { contents: [{ uri: boundToken ? `thinking://sessions?token=${encodeURIComponent(boundToken)}` : "thinking://sessions", text: JSON.stringify(list, null, 2), mimeType: "application/json" }] };
     }
   );
 
@@ -182,7 +248,22 @@ const transports: Record<string, StreamableHTTPServerTransport> = {};
 app.post("/", async (req: Request, res: Response) => {
   try {
     const sessionIdHeader = req.headers["mcp-session-id"] as string | undefined;
+    const tokenHeader = readTokenFromHeaders(req.headers);
     if (sessionIdHeader && transports[sessionIdHeader]) {
+      // Enforce token consistency when a session already exists
+      const server = sessionIdToServer[sessionIdHeader];
+      const boundToken = server ? serverToToken.get(server) : undefined;
+      if (boundToken && tokenHeader && boundToken !== tokenHeader) {
+        res
+          .status(403)
+          .json({ jsonrpc: "2.0", error: { code: -32003, message: "Token mismatch for session" }, id: null });
+        return;
+      }
+      if (!boundToken && tokenHeader && server) {
+        serverToToken.set(server, tokenHeader);
+        registerTokenResource(server, tokenHeader);
+        sessionIdToToken[sessionIdHeader] = tokenHeader;
+      }
       await transports[sessionIdHeader].handleRequest(req as any, res as any, req.body);
       return;
     }
@@ -199,19 +280,27 @@ app.post("/", async (req: Request, res: Response) => {
           });
         return;
       }
-
+      // Create server first so we can bind mappings in the transport callbacks
+      const server = createMcpServer();
+      if (tokenHeader) {
+        serverToToken.set(server, tokenHeader);
+        registerTokenResource(server, tokenHeader);
+      }
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => crypto.randomUUID(),
         enableJsonResponse: true,
         onsessioninitialized: (sid: string) => {
           transports[sid] = transport;
+          // Bind session to server and token
+          sessionIdToServer[sid] = server;
+          if (tokenHeader) sessionIdToToken[sid] = tokenHeader;
         },
         onsessionclosed: (sid: string) => {
           delete transports[sid];
+          delete sessionIdToServer[sid];
+          delete sessionIdToToken[sid];
         }
       });
-
-      const server = createMcpServer();
       await server.connect(transport);
       await transport.handleRequest(req as any, res as any, req.body);
       return;
@@ -229,12 +318,27 @@ app.post("/", async (req: Request, res: Response) => {
 // GET: SSE stream per session
 app.get("/", async (req: Request, res: Response) => {
   const sessionIdHeader = req.headers["mcp-session-id"] as string | undefined;
+  const tokenHeader = readTokenFromHeaders(req.headers);
   const transport = sessionIdHeader ? transports[sessionIdHeader] : undefined;
   if (!transport) {
     res
       .status(400)
       .json({ jsonrpc: "2.0", error: { code: -32000, message: "Invalid or missing session ID" }, id: null });
     return;
+  }
+  // Enforce token consistency for SSE channel
+  const server = sessionIdToServer[sessionIdHeader!];
+  const boundToken = server ? serverToToken.get(server) : undefined;
+  if (boundToken && tokenHeader && boundToken !== tokenHeader) {
+    res
+      .status(403)
+      .json({ jsonrpc: "2.0", error: { code: -32003, message: "Token mismatch for session" }, id: null });
+    return;
+  }
+  if (!boundToken && tokenHeader && server) {
+    serverToToken.set(server, tokenHeader);
+    registerTokenResource(server, tokenHeader);
+    if (sessionIdHeader) sessionIdToToken[sessionIdHeader] = tokenHeader;
   }
   try {
     await transport.handleRequest(req as any, res as any);
@@ -246,11 +350,20 @@ app.get("/", async (req: Request, res: Response) => {
 // DELETE: terminate a session
 app.delete("/", async (req: Request, res: Response) => {
   const sessionIdHeader = req.headers["mcp-session-id"] as string | undefined;
+  const tokenHeader = readTokenFromHeaders(req.headers);
   const transport = sessionIdHeader ? transports[sessionIdHeader] : undefined;
   if (!transport) {
     res
       .status(400)
       .json({ jsonrpc: "2.0", error: { code: -32000, message: "Invalid or missing session ID" }, id: null });
+    return;
+  }
+  const server = sessionIdToServer[sessionIdHeader!];
+  const boundToken = server ? serverToToken.get(server) : undefined;
+  if (boundToken && tokenHeader && boundToken !== tokenHeader) {
+    res
+      .status(403)
+      .json({ jsonrpc: "2.0", error: { code: -32003, message: "Token mismatch for session" }, id: null });
     return;
   }
   try {
