@@ -8,7 +8,8 @@
   "engines": { "vscode": "^1.89.0" },
   "main": "./dist/extension.js",
   "activationEvents": [
-    "onView:thinkingLogger.sessions"
+    "onView:thinkingLogger.sessions",
+    "onCommand:thinkingLogger.clearToken"
   ],
   "icon": "media/white-icon.png",
   "license": "GPL-3.0-only",
@@ -50,7 +51,13 @@
         }
       ]
     },
-    "commands": []
+    "commands": [
+      {
+        "command": "thinkingLogger.clearToken",
+        "title": "Thinking Logger: Clear Token",
+        "category": "Thinking Logger"
+      }
+    ]
   },
   
   "devDependencies": {
