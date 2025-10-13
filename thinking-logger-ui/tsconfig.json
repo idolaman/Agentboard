@@ -7,6 +7,8 @@
     "rootDir": "src",
     "lib": ["ES2022", "DOM"],
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "types": ["node", "vscode"],
     "skipLibCheck": true,
     "jsx": "react-jsx"

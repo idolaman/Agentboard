@@ -20,7 +20,11 @@
   },
   "scripts": {
     "build": "tsc -p .",
-    "watch": "tsc -w -p ."
+    "watch": "tsc -w -p .",
+    "typecheck": "tsc -p . --noEmit",
+    "lint": "eslint . --ext .ts --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "contributes": {
     "viewsContainers": {
@@ -63,10 +67,16 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.89.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "eslint": "^9.11.0",
+    "@typescript-eslint/eslint-plugin": "^7.16.1",
+    "@typescript-eslint/parser": "^7.16.1",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.3"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.3"
+    "@modelcontextprotocol/sdk": "^1.17.3",
+    "zod": "^3.23.8"
   }
 }
 
