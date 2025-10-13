@@ -5,6 +5,7 @@ import express from "express";
 import type { Request, Response } from "express";
 import { z } from "zod";
 import crypto from "node:crypto";
+import cors from "cors";
 
 type Status = "ok" | "cancelled" | "error";
 type Session = {
@@ -76,8 +77,8 @@ function registerTokenResource(mcp: McpServer, token: string): void {
     }
   );
   set.add(uri);
-  // Notify this client that new resources are available
-  void mcp.server.sendResourceListChanged();
+  // Notify this client that new resources are available (ignore if not connected yet)
+  mcp.server.sendResourceListChanged().catch(() => {});
 }
 
 const activeServers = new Set<McpServer>();
@@ -240,6 +241,24 @@ function createMcpServer() {
 // HTTP/SSE server with proper session management (supports multiple concurrent Cursor clients)
 const PORT = Number(process.env.THINKING_LOGGER_HTTP_PORT || "17890");
 const app = express();
+// Allow CORS so Authorization and custom MCP headers work behind proxies/CDNs (e.g., Vercel)
+const corsOptions: cors.CorsOptions = {
+  origin: "*",
+  methods: ["GET", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "x-thinking-token",
+    "thinking-token",
+    "mcp-token",
+    "mcp-session-id",
+    "mcp-protocol-version",
+  ],
+  exposedHeaders: ["mcp-session-id"],
+  maxAge: 86400,
+};
+app.use(cors(corsOptions));
+app.options("/", cors(corsOptions));
 app.use(express.json());
 
 const transports: Record<string, StreamableHTTPServerTransport> = {};
