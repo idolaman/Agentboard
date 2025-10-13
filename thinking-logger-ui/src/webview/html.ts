@@ -68,6 +68,9 @@ export function getWebviewHtml(options: {
 		</style>
 	</head>
 	<body>
+		<header style="display:flex;align-items:center;justify-content:flex-end;padding:8px 10px;border-bottom:1px solid var(--border);">
+			<button id="clear" class="chip" title="Log Out" style="cursor:pointer;">Log Out</button>
+		</header>
 		<section class="list" id="list"></section>
 		<div id="error" class="error" style="display:none"></div>
 		<script nonce="${nonce}">
@@ -85,6 +88,7 @@ export function getWebviewHtml(options: {
 			});
 			window.addEventListener('DOMContentLoaded', () => {
 				vscodeApi.postMessage({ type: 'ui/ready' });
+				document.getElementById('clear')?.addEventListener('click', () => { vscodeApi.postMessage({ type: 'ui/clearToken' }); });
 			});
 			// setup page is served separately when no token
 			function toHuman(iso) {
@@ -159,27 +163,48 @@ export function getSetupHtml(nonce: string): string {
 		<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<style>
-			body { margin: 0; padding: 16px; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-			.container { display: grid; gap: 12px; }
-			label { font-size: 12px; color: #888; }
-			input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; }
-			button { padding: 8px 12px; border-radius: 8px; border: none; background: #0a84ff; color: white; cursor: pointer; }
-			button:disabled { opacity: .6; cursor: default; }
+			:root { --bg: #1e1e1e; --card: #2a2a2a; --fg: #e6e6e6; --muted:#9aa0a6; --accent:#0a84ff; --border: #3a3a3a; }
+			* { box-sizing: border-box; }
+			body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--fg); background: var(--bg); }
+			.card { width: min(520px, 92vw); background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 18px 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.3); }
+			h3 { margin: 0 0 4px 0; font-size: 16px; font-weight: 700; }
+			p.desc { margin: 0 0 14px 0; font-size: 12px; color: var(--muted); }
+			label { display:block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+			.row { display:flex; align-items:center; gap:8px; }
+			input[type=password], input[type=text] { flex:1; width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); color: var(--fg); background: #1b1b1b; }
+			input::placeholder { color: #717171; }
+			button.primary { padding: 10px 14px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--accent) 65%, transparent); background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--fg); cursor: pointer; font-weight: 600; }
+			button.primary:disabled { opacity: .6; cursor: default; }
+			button.link { background: transparent; border: none; color: var(--muted); cursor: pointer; text-decoration: underline; padding: 0; }
+			.hint { margin-top: 10px; font-size: 11px; color: var(--muted); }
 		</style>
 	</head>
 	<body>
-		<div class="container">
+		<div class="card">
 			<h3>Thinking Logger – Enter Token</h3>
-			<p>Paste the token you generated to view your sessions.</p>
+			<p class="desc">Paste the token you generated to view your sessions.</p>
 			<label for="t">Token</label>
-			<input id="t" type="password" placeholder="Your token" />
-			<div><button id="s" disabled>Save token</button></div>
+			<div class="row">
+				<input id="t" type="password" placeholder="Your token" />
+				<button id="toggle" class="link" aria-label="Show password">Show</button>
+			</div>
+			<div style="margin-top: 12px; display:flex; align-items:center; gap:8px;">
+				<button id="s" class="primary" disabled>Save token</button>
+			</div>
+			<div class="hint">Tokens are stored in VS Code Secret Storage on this machine.</div>
 		</div>
 		<script nonce="${nonce}">
 			const vscodeApi = acquireVsCodeApi();
 			const el = document.getElementById('t');
 			const btn = document.getElementById('s');
+			const toggle = document.getElementById('toggle');
 			el.addEventListener('input', () => { btn.disabled = !String(el.value||'').trim(); });
+			el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } });
+			toggle.addEventListener('click', (e) => {
+				e.preventDefault();
+				if (el.getAttribute('type') === 'password') { el.setAttribute('type', 'text'); toggle.textContent = 'Hide'; }
+				else { el.setAttribute('type', 'password'); toggle.textContent = 'Show'; }
+			});
 			btn.addEventListener('click', () => {
 				const token = String(el.value||'').trim();
 				if (token) vscodeApi.postMessage({ type: 'ui/saveToken', token });
