@@ -24,6 +24,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
     private currentView: vscode.WebviewView | undefined;
 	private readonly store = new SessionStore();
 	private pendingToken: string | undefined;
+    private messageSubscription: vscode.Disposable | undefined;
 
 	constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -61,7 +62,9 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 			webviewView.webview.html = getWebviewHtml({ webview: webviewView.webview, nonce, icons });
 		}
 
-		webviewView.webview.onDidReceiveMessage(async (raw) => {
+		// Ensure only one active message subscription
+		this.messageSubscription?.dispose();
+		this.messageSubscription = webviewView.webview.onDidReceiveMessage(async (raw) => {
 			const parsed = UiToHostMessageSchema.safeParse(raw);
 			if (!parsed.success) {
 				logger.warn('Rejected unknown webview message');
@@ -84,6 +87,7 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 					await removeToken(this.context);
 					this.pendingToken = undefined;
 					this.store.setToken(undefined);
+					await this.resolveWebviewView(webviewView);
 					break;
 				}
 				case 'ui/retry': {
@@ -95,6 +99,8 @@ class SessionsViewProvider implements vscode.WebviewViewProvider {
 
 		webviewView.onDidDispose(() => {
 			this.store.dispose();
+			this.messageSubscription?.dispose();
+			this.messageSubscription = undefined;
 		});
 	}
 }

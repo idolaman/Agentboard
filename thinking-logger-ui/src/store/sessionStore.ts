@@ -11,10 +11,12 @@ export class SessionStore {
 	private currentToken: string | undefined;
 	private lastKey: string | undefined;
 	private session: { sessionId: string; protocolVersion: string } | undefined;
+	private viewDispose: vscode.Disposable | undefined;
 
 	attach(view: vscode.WebviewView): void {
+		this.viewDispose?.dispose();
 		this.view = view;
-		this.view.onDidDispose(() => this.dispose());
+		this.viewDispose = this.view.onDidDispose(() => this.dispose());
 	}
 
 	setToken(token: string | undefined): void {
@@ -94,6 +96,8 @@ export class SessionStore {
 	dispose(): void {
 		this.stop();
 		this.view = undefined;
+		this.viewDispose?.dispose();
+		this.viewDispose = undefined;
 	}
 }
 
