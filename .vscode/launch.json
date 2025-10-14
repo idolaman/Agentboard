@@ -13,6 +13,19 @@
         "${workspaceFolder}/thinking-logger-ui/dist/**/*.js"
       ],
       "preLaunchTask": "build-thinking-logger-ui"
+    },
+    {
+      "name": "Run From Unpacked VSIX (marketplace simulation)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/.tmp-vsix/extension/extension"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/.tmp-vsix/extension/extension/dist/**/*.js"
+      ],
+      "preLaunchTask": "package-and-unpack-vsix"
     }
   ]
 }

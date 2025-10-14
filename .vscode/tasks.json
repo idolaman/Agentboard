@@ -4,13 +4,22 @@
     {
       "label": "build-thinking-logger-ui",
       "type": "shell",
-      "command": "npm run build",
       "options": {
         "cwd": "${workspaceFolder}/thinking-logger-ui"
       },
-      "problemMatcher": ["$tsc"],
-      "group": "build"
+      "command": "npm run build",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "package-and-unpack-vsix",
+      "type": "shell",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "command": "cd thinking-logger-ui && npm install --legacy-peer-deps && npm run build && npx --yes vsce package && cd .. && rm -rf .tmp-vsix/extension && mkdir -p .tmp-vsix/extension && unzip -q -o $(ls -t thinking-logger-ui/thinking-logger-view-*.vsix | head -1) -d .tmp-vsix/extension",
+      "group": "build",
+      "problemMatcher": []
     }
   ]
 }
-
