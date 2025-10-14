@@ -23,5 +23,6 @@ out/
 state.vscdb
 venv/
 dist/
-.sense
+.cursor_*
+.vscode_*
 .load
