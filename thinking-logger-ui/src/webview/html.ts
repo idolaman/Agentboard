@@ -162,10 +162,11 @@ export function getSetupHtml(nonce: string): string {
 		<meta charset="UTF-8" />
 		<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<style>
-			:root { --bg: #1e1e1e; --card: #2a2a2a; --fg: #e6e6e6; --muted:#9aa0a6; --accent:#0a84ff; --border: #3a3a3a; }
-			* { box-sizing: border-box; }
-			body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--fg); background: var(--bg); }
+    <style>
+            :root { --bg: #1e1e1e; --card: #2a2a2a; --fg: #e6e6e6; --muted:#9aa0a6; --accent:#0a84ff; --border: #3a3a3a; }
+            * { box-sizing: border-box; }
+            html, body { height: 100%; }
+            body { margin: 0; height: 100%; display: flex; align-items: center; justify-content: center; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: var(--fg); background: var(--bg); }
 			.card { width: min(520px, 92vw); background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 18px 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.3); }
 			h3 { margin: 0 0 4px 0; font-size: 16px; font-weight: 700; }
 			p.desc { margin: 0 0 14px 0; font-size: 12px; color: var(--muted); }
