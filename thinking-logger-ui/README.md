@@ -21,8 +21,8 @@ Keep tabs on your AI agents without leaving your editor. Agentboard shows live p
    - Paste the token when prompted and click “Save token”
    - You’ll immediately see your sessions
 
-4) Add MCP Configuration (optional for Cursor/Claude)
-   - Cursor `.cursor/mcp.json`:
+4) Add MCP Configuration (optional for Cursor/VSCode/Claude)
+   - Cursor \ VSCode `mcp.json`:
 
 ```json
 {

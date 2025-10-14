@@ -26,3 +26,4 @@ dist/
 .cursor_*
 .vscode_*
 .load
+.tmp-vsix/

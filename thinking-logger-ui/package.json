@@ -1,11 +1,13 @@
 {
   "name": "thinking-logger-view",
   "displayName": "Agentboard",
-  "version": "0.1.17",
+  "version": "0.1.20",
   "private": true,
   "description": "A Cursor/VS Code sidebar to visualize thinking sessions from the MCP server.",
   "publisher": "idolaman",
-  "engines": { "vscode": "^1.89.0" },
+  "engines": {
+    "vscode": "^1.89.0"
+  },
   "main": "./dist/extension.js",
   "activationEvents": [
     "onView:thinkingLogger.sessions",
@@ -13,11 +15,20 @@
   ],
   "icon": "media/white-icon.png",
   "license": "GPL-3.0-only",
-  "categories": ["Other"],
-  
+  "categories": [
+    "Other"
+  ],
+  "files": [
+    "dist/**",
+    "media/**",
+    "node_modules/zod/**",
+    "package.json",
+    "README.md",
+    "LICENSE.md"
+  ],
   "scripts": {
-    "build": "tsc -p .",
-    "watch": "tsc -w -p .",
+    "build": "tsup",
+    "watch": "tsup --watch",
     "typecheck": "tsc -p . --noEmit",
     "lint": "eslint . --ext .ts --max-warnings 0",
     "format": "prettier --write .",
@@ -60,20 +71,25 @@
       }
     ]
   },
-  
   "devDependencies": {
-    "@types/node": "^20.11.0",
+    "@types/node": "^20.19.21",
     "@types/vscode": "^1.89.0",
-    "typescript": "^5.5.0",
-    "eslint": "^9.11.0",
     "@typescript-eslint/eslint-plugin": "^7.16.1",
     "@typescript-eslint/parser": "^7.16.1",
+    "eslint": "^9.11.0",
     "eslint-config-prettier": "^9.1.0",
-    "prettier": "^3.3.3"
+    "prettier": "^3.3.3",
+    "tsup": "^8.0.2",
+    "typescript": "^5.5.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.3",
     "zod": "^3.23.8"
-  }
+  },
+  "bundledDependencies": [
+    "zod"
+  ],
+  "bundleDependencies": [
+    "zod"
+  ]
 }
-

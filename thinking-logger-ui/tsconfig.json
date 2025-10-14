@@ -10,6 +10,7 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "types": ["node", "vscode"],
+    "typeRoots": ["./node_modules/@types"],
     "skipLibCheck": true,
     "jsx": "react-jsx"
   },
