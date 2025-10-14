@@ -1,7 +1,7 @@
 {
   "name": "thinking-logger-view",
   "displayName": "Agentboard",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "private": true,
   "description": "A Cursor/VS Code sidebar to visualize thinking sessions from the MCP server.",
   "publisher": "idolaman",
@@ -14,10 +14,7 @@
   "icon": "media/white-icon.png",
   "license": "GPL-3.0-only",
   "categories": ["Other"],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/idolaman/Agentboard"
-  },
+  
   "scripts": {
     "build": "tsc -p .",
     "watch": "tsc -w -p .",
@@ -41,7 +38,7 @@
       "properties": {
         "thinkingLogger.serverUrl": {
           "type": "string",
-          "default": "http://127.0.0.1:17890",
+          "default": "https://agentboard.onrender.com",
           "description": "Base URL of the Thinking Logger MCP server (HTTP/SSE)."
         }
       }

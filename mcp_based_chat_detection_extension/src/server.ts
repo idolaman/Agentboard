@@ -6,6 +6,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import crypto from "node:crypto";
 import cors from "cors";
+import { logger, fingerprintToken } from "./logger.js";
 
 type Status = "ok" | "cancelled" | "error";
 type Session = {
@@ -79,12 +80,14 @@ function registerTokenResource(mcp: McpServer, token: string): void {
   set.add(uri);
   // Notify this client that new resources are available (ignore if not connected yet)
   mcp.server.sendResourceListChanged().catch(() => {});
+  logger.debug("resource.register", { tokenFp: fingerprintToken(token) });
 }
 
 const activeServers = new Set<McpServer>();
 function createMcpServer() {
   const mcp = new McpServer({ name: "thinking-logger", version: "0.1.0" });
   activeServers.add(mcp);
+  logger.debug("server.mcp.add", { activeServers: activeServers.size });
 
   async function notifySession(sessionId: string) {
     const uris: string[] = [];
@@ -103,6 +106,11 @@ function createMcpServer() {
         }
         await srv.server.sendResourceListChanged();
       } catch {}
+    }
+    if (s?.token) {
+      logger.debug("session.notify", { sessionId, tokenFp: fingerprintToken(s.token) });
+    } else {
+      logger.debug("session.notify", { sessionId });
     }
   }
 
@@ -139,6 +147,14 @@ function createMcpServer() {
 
       await notifySession(s.id);
 
+      logger.info("tool.start_message_log", {
+        thinkingSessionId: s.id,
+        platform: s.platform,
+        project: s.project,
+        git_branch: s.git_branch,
+        hasToken: Boolean(s.token),
+        tokenFp: (s.token ? fingerprintToken(s.token) : (serverToToken.get(mcp) ? fingerprintToken(serverToToken.get(mcp)!) : undefined)),
+      });
       return { content: [{ type: "text", text: s.id }] };
     }
   );
@@ -159,6 +175,11 @@ function createMcpServer() {
     async (args, _extra) => {
       const s = sessions.get(args.session_id);
       if (!s) {
+        logger.warn("tool.end_message_log.unknown_session", {
+          thinkingSessionId: args.session_id,
+          status: args.status,
+          tokenFp: (serverToToken.get(mcp) ? fingerprintToken(serverToToken.get(mcp)!) : undefined),
+        });
         return { content: [{ type: "text", text: "unknown session_id (ignored)" }] };
       }
       s.ended_at = now();
@@ -168,6 +189,12 @@ function createMcpServer() {
 
       await notifySession(s.id);
 
+      logger.info("tool.end_message_log", {
+        thinkingSessionId: s.id,
+        status: s.status,
+        hasError: Boolean(args.error),
+        tokenFp: (s.token ? fingerprintToken(s.token) : (serverToToken.get(mcp) ? fingerprintToken(serverToToken.get(mcp)!) : undefined)),
+      });
       return { content: [{ type: "text", text: "ok" }] };
     }
   );
@@ -186,11 +213,19 @@ function createMcpServer() {
     async (args, _extra) => {
       const s = sessions.get(args.session_id);
       if (!s) {
+        logger.warn("tool.before_command_log.unknown_session", {
+          thinkingSessionId: args.session_id,
+          tokenFp: (serverToToken.get(mcp) ? fingerprintToken(serverToToken.get(mcp)!) : undefined),
+        });
         return { content: [{ type: "text", text: "unknown session_id (ignored)" }] };
       }
       const ts = now();
       s.approval_pending_since = ts;
       await notifySession(s.id);
+      logger.info("tool.before_command_log", {
+        thinkingSessionId: s.id,
+        tokenFp: (s.token ? fingerprintToken(s.token) : (serverToToken.get(mcp) ? fingerprintToken(serverToToken.get(mcp)!) : undefined)),
+      });
       return { content: [{ type: "text", text: "ok" }] };
     }
   );
@@ -209,11 +244,19 @@ function createMcpServer() {
     async (args, _extra) => {
       const s = sessions.get(args.session_id);
       if (!s) {
+        logger.warn("tool.after_command_log.unknown_session", {
+          thinkingSessionId: args.session_id,
+          tokenFp: (serverToToken.get(mcp) ? fingerprintToken(serverToToken.get(mcp)!) : undefined),
+        });
         return { content: [{ type: "text", text: "unknown session_id (ignored)" }] };
       }
       const ts = now();
       delete s.approval_pending_since;
       await notifySession(s.id);
+      logger.info("tool.after_command_log", {
+        thinkingSessionId: s.id,
+        tokenFp: (s.token ? fingerprintToken(s.token) : (serverToToken.get(mcp) ? fingerprintToken(serverToToken.get(mcp)!) : undefined)),
+      });
       return { content: [{ type: "text", text: "ok" }] };
     }
   );
@@ -266,13 +309,26 @@ const transports: Record<string, StreamableHTTPServerTransport> = {};
 // POST: handle initialization and JSON-RPC message flow
 app.post("/", async (req: Request, res: Response) => {
   try {
+    const reqId = crypto.randomUUID();
     const sessionIdHeader = req.headers["mcp-session-id"] as string | undefined;
     const tokenHeader = readTokenFromHeaders(req.headers);
+    logger.debug("http.request", {
+      reqId,
+      method: req.method,
+      route: "/",
+      kind: "POST",
+      sessionId: sessionIdHeader,
+      hasToken: Boolean(tokenHeader),
+      tokenFp: tokenHeader ? fingerprintToken(tokenHeader) : undefined,
+      client: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
     if (sessionIdHeader && transports[sessionIdHeader]) {
       // Enforce token consistency when a session already exists
       const server = sessionIdToServer[sessionIdHeader];
       const boundToken = server ? serverToToken.get(server) : undefined;
       if (boundToken && tokenHeader && boundToken !== tokenHeader) {
+        logger.warn("auth.token_mismatch", { reqId, sessionId: sessionIdHeader, tokenFp: fingerprintToken(tokenHeader), boundTokenFp: fingerprintToken(boundToken) });
         res
           .status(403)
           .json({ jsonrpc: "2.0", error: { code: -32003, message: "Token mismatch for session" }, id: null });
@@ -282,14 +338,17 @@ app.post("/", async (req: Request, res: Response) => {
         serverToToken.set(server, tokenHeader);
         registerTokenResource(server, tokenHeader);
         sessionIdToToken[sessionIdHeader] = tokenHeader;
+        logger.info("token.bind", { reqId, sessionId: sessionIdHeader, tokenFp: fingerprintToken(tokenHeader) });
       }
       await transports[sessionIdHeader].handleRequest(req as any, res as any, req.body);
+      logger.debug("rpc.post", { reqId, sessionId: sessionIdHeader });
       return;
     }
 
     // If no session ID provided, we only accept initialization requests
     if (!sessionIdHeader) {
       if (!isInitializeRequest(req.body)) {
+        logger.warn("rpc.bad_request", { reqId, reason: "no valid session id provided" });
         res
           .status(400)
           .json({
@@ -304,6 +363,7 @@ app.post("/", async (req: Request, res: Response) => {
       if (tokenHeader) {
         serverToToken.set(server, tokenHeader);
         registerTokenResource(server, tokenHeader);
+        logger.info("token.bind", { reqId, sessionPhase: "init", tokenFp: fingerprintToken(tokenHeader) });
       }
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => crypto.randomUUID(),
@@ -313,23 +373,28 @@ app.post("/", async (req: Request, res: Response) => {
           // Bind session to server and token
           sessionIdToServer[sid] = server;
           if (tokenHeader) sessionIdToToken[sid] = tokenHeader;
+          logger.info("session.open", { reqId, sessionId: sid, hasToken: Boolean(tokenHeader), tokenFp: tokenHeader ? fingerprintToken(tokenHeader) : undefined });
         },
         onsessionclosed: (sid: string) => {
           delete transports[sid];
           delete sessionIdToServer[sid];
           delete sessionIdToToken[sid];
+          logger.info("session.closed", { sessionId: sid });
         }
       });
       await server.connect(transport);
       await transport.handleRequest(req as any, res as any, req.body);
+      logger.info("rpc.init", { reqId });
       return;
     }
 
     // Unknown session ID
+    logger.warn("rpc.session_not_found", { reqId, sessionId: sessionIdHeader });
     res
       .status(404)
       .json({ jsonrpc: "2.0", error: { code: -32001, message: "Session not found" }, id: null });
-  } catch {
+  } catch (err) {
+    logger.error("rpc.internal_error", { error: err instanceof Error ? { message: err.message, name: err.name } : { message: String(err) } });
     if (!res.headersSent) res.status(500).end();
   }
 });
@@ -340,6 +405,7 @@ app.get("/", async (req: Request, res: Response) => {
   const tokenHeader = readTokenFromHeaders(req.headers);
   const transport = sessionIdHeader ? transports[sessionIdHeader] : undefined;
   if (!transport) {
+    logger.warn("sse.invalid_session", { sessionId: sessionIdHeader });
     res
       .status(400)
       .json({ jsonrpc: "2.0", error: { code: -32000, message: "Invalid or missing session ID" }, id: null });
@@ -349,6 +415,7 @@ app.get("/", async (req: Request, res: Response) => {
   const server = sessionIdToServer[sessionIdHeader!];
   const boundToken = server ? serverToToken.get(server) : undefined;
   if (boundToken && tokenHeader && boundToken !== tokenHeader) {
+    logger.warn("auth.token_mismatch", { sessionId: sessionIdHeader, tokenFp: fingerprintToken(tokenHeader), boundTokenFp: fingerprintToken(boundToken) });
     res
       .status(403)
       .json({ jsonrpc: "2.0", error: { code: -32003, message: "Token mismatch for session" }, id: null });
@@ -358,10 +425,13 @@ app.get("/", async (req: Request, res: Response) => {
     serverToToken.set(server, tokenHeader);
     registerTokenResource(server, tokenHeader);
     if (sessionIdHeader) sessionIdToToken[sessionIdHeader] = tokenHeader;
+    logger.info("token.bind", { sessionId: sessionIdHeader, tokenFp: fingerprintToken(tokenHeader) });
   }
   try {
+    logger.info("sse.open", { sessionId: sessionIdHeader, hasToken: Boolean(tokenHeader), tokenFp: tokenHeader ? fingerprintToken(tokenHeader) : undefined });
     await transport.handleRequest(req as any, res as any);
-  } catch {
+  } catch (err) {
+    logger.error("sse.error", { sessionId: sessionIdHeader, error: err instanceof Error ? { message: err.message, name: err.name } : { message: String(err) } });
     if (!res.headersSent) res.status(500).end();
   }
 });
@@ -372,6 +442,7 @@ app.delete("/", async (req: Request, res: Response) => {
   const tokenHeader = readTokenFromHeaders(req.headers);
   const transport = sessionIdHeader ? transports[sessionIdHeader] : undefined;
   if (!transport) {
+    logger.warn("session.terminate.invalid_session", { sessionId: sessionIdHeader });
     res
       .status(400)
       .json({ jsonrpc: "2.0", error: { code: -32000, message: "Invalid or missing session ID" }, id: null });
@@ -380,16 +451,21 @@ app.delete("/", async (req: Request, res: Response) => {
   const server = sessionIdToServer[sessionIdHeader!];
   const boundToken = server ? serverToToken.get(server) : undefined;
   if (boundToken && tokenHeader && boundToken !== tokenHeader) {
+    logger.warn("auth.token_mismatch", { sessionId: sessionIdHeader, tokenFp: fingerprintToken(tokenHeader), boundTokenFp: fingerprintToken(boundToken) });
     res
       .status(403)
       .json({ jsonrpc: "2.0", error: { code: -32003, message: "Token mismatch for session" }, id: null });
     return;
   }
   try {
+    logger.info("session.terminate", { sessionId: sessionIdHeader });
     await transport.handleRequest(req as any, res as any);
-  } catch {
+  } catch (err) {
+    logger.error("session.terminate.error", { sessionId: sessionIdHeader, error: err instanceof Error ? { message: err.message, name: err.name } : { message: String(err) } });
     if (!res.headersSent) res.status(500).end();
   }
 });
 
-app.listen(PORT);
+app.listen(PORT, () => {
+  logger.info("server.start", { port: PORT, logLevel: logger.level });
+});
