@@ -28,6 +28,12 @@ export interface Session {
   /** Git branch at time of session */
   git_branch?: string;
 
+  /** Absolute path to the workspace/project directory */
+  workspace_path?: string;
+
+  /** Estimated duration for this prompt in seconds */
+  estimated_duration?: number;
+
   /** ISO timestamp when session started */
   started_at: string;
 

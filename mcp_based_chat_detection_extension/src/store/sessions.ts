@@ -31,6 +31,8 @@ class SessionStore {
     title?: string | undefined;
     project?: string | undefined;
     gitBranch?: string | undefined;
+    workspacePath?: string | undefined;
+    estimatedDuration?: number | undefined;
     token?: string | undefined;
   }): Session {
     const session: Session = {
@@ -42,6 +44,8 @@ class SessionStore {
     if (params.title) session.title = params.title;
     if (params.project) session.project = params.project;
     if (params.gitBranch) session.git_branch = params.gitBranch;
+    if (params.workspacePath) session.workspace_path = params.workspacePath;
+    if (params.estimatedDuration !== undefined) session.estimated_duration = params.estimatedDuration;
     if (!TOKENLESS_MODE && params.token) session.token = params.token;
 
     this.sessions.set(session.id, session);

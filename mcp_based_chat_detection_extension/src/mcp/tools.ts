@@ -23,6 +23,8 @@ const startMessageLogSchema = {
   platform: z.enum(["cursor", "chatgpt", "claude", "github", "vscode"]).describe("AI platform/runtime"),
   project: z.string().optional().describe("Project folder name (if applicable)"),
   git_branch: z.string().optional().describe("Project git branch (if applicable)"),
+  workspace_path: z.string().optional().describe("Absolute path to the workspace/project root directory (pwd)"),
+  estimated_duration: z.number().optional().describe("Estimated time to complete this prompt in seconds"),
   session_id: z.string(),
 };
 
@@ -97,13 +99,24 @@ export function registerTools(
     },
     async (args) => {
       const token = getServerToken(server);
+      const typedArgs = args as {
+        session_id?: string;
+        platform: string;
+        title: string;
+        project?: string;
+        git_branch?: string;
+        workspace_path?: string;
+        estimated_duration?: number;
+      };
 
       const session = sessionStore.create({
-        sessionId: (args as any).session_id || undefined,
-        platform: String((args as any).platform),
-        title: args.title,
-        project: (args as any).project ? String((args as any).project) : undefined,
-        gitBranch: (args as any).git_branch ? String((args as any).git_branch) : undefined,
+        sessionId: typedArgs.session_id || undefined,
+        platform: typedArgs.platform,
+        title: typedArgs.title,
+        project: typedArgs.project,
+        gitBranch: typedArgs.git_branch,
+        workspacePath: typedArgs.workspace_path,
+        estimatedDuration: typedArgs.estimated_duration,
         token,
       });
 
@@ -114,6 +127,8 @@ export function registerTools(
         platform: session.platform,
         project: session.project,
         git_branch: session.git_branch,
+        workspace_path: session.workspace_path,
+        estimated_duration: session.estimated_duration,
         hasToken: Boolean(session.token),
         tokenFp: getTokenFingerprint(server, session.token),
       });
