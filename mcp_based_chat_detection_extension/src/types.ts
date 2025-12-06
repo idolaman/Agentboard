@@ -28,6 +28,9 @@ export interface Session {
   /** Git branch at time of session */
   git_branch?: string;
 
+  /** Stable identifier for the conversation/chat */
+  chat_id?: string;
+
   /** Absolute path to the workspace/project directory */
   workspace_path?: string;
 
@@ -58,4 +61,3 @@ export interface Session {
   tokens_in?: number;
   tokens_out?: number;
 }
-

@@ -33,6 +33,7 @@ MANDATORY SESSION LIFECYCLE:
 Every response you generate MUST follow this lifecycle:
 
 1. START: Call 'start_message_log' IMMEDIATELY as your very first action when you receive any user message. Do this BEFORE any reasoning, planning, or other tool calls. This returns a session_id you will use throughout.
+   - Include chat_id: reuse the SAME chat_id for every message in the same chat/conversation.
 
 2. WORK: Perform your reasoning and tool calls normally. If you need to run approval-gated commands (terminal, shell, external scripts), wrap each with before_command_log/after_command_log.
 
@@ -88,6 +89,11 @@ const startMessageLogSchema = {
     .optional()
     .describe(
       "The current git branch name if the project is a git repository. Obtain from git status or user context."
+    ),
+  chat_id: z
+    .string()
+    .describe(
+      "Stable identifier for the overall chat/conversation. Use the SAME chat_id value for every message in a given chat."
     ),
   workspace_path: z
     .string()
@@ -238,6 +244,7 @@ export function registerTools(
         title: string;
         project?: string;
         git_branch?: string;
+        chat_id: string;
         workspace_path: string;
         estimated_duration: number;
       };
@@ -248,6 +255,7 @@ export function registerTools(
         title: typedArgs.title,
         project: typedArgs.project,
         gitBranch: typedArgs.git_branch,
+        chatId: typedArgs.chat_id,
         workspacePath: typedArgs.workspace_path,
         estimatedDuration: typedArgs.estimated_duration,
         token,
@@ -260,6 +268,7 @@ export function registerTools(
         platform: session.platform,
         project: session.project,
         git_branch: session.git_branch,
+        chat_id: session.chat_id,
         workspace_path: session.workspace_path,
         estimated_duration: session.estimated_duration,
         hasToken: Boolean(session.token),
@@ -366,4 +375,3 @@ export function registerTools(
     }
   );
 }
-

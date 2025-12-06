@@ -31,6 +31,7 @@ class SessionStore {
     title?: string | undefined;
     project?: string | undefined;
     gitBranch?: string | undefined;
+    chatId?: string | undefined;
     workspacePath?: string | undefined;
     estimatedDuration?: number | undefined;
     token?: string | undefined;
@@ -44,6 +45,7 @@ class SessionStore {
     if (params.title) session.title = params.title;
     if (params.project) session.project = params.project;
     if (params.gitBranch) session.git_branch = params.gitBranch;
+    if (params.chatId) session.chat_id = params.chatId;
     if (params.workspacePath) session.workspace_path = params.workspacePath;
     if (params.estimatedDuration !== undefined) session.estimated_duration = params.estimatedDuration;
     if (!TOKENLESS_MODE && params.token) session.token = params.token;
@@ -123,4 +125,3 @@ class SessionStore {
 
 /** Singleton session store instance */
 export const sessionStore = new SessionStore();
-
