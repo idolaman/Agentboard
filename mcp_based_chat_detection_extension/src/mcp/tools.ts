@@ -93,7 +93,7 @@ const startMessageLogSchema = {
   chat_id: z
     .string()
     .describe(
-      "Stable identifier for the overall chat/conversation. Use the SAME chat_id value for every message in a given chat."
+      "Stable identifier for the overall chat/conversation. Use the SAME chat_id value for every message in a given chat. Generate a 16-character unique string (e.g., random hex) per chat."
     ),
   workspace_path: z
     .string()
