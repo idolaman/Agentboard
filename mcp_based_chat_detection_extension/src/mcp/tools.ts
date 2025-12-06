@@ -23,8 +23,8 @@ const startMessageLogSchema = {
   platform: z.enum(["cursor", "chatgpt", "claude", "github", "vscode"]).describe("AI platform/runtime"),
   project: z.string().optional().describe("Project folder name (if applicable)"),
   git_branch: z.string().optional().describe("Project git branch (if applicable)"),
-  workspace_path: z.string().optional().describe("Absolute path to the workspace/project root directory (pwd)"),
-  estimated_duration: z.number().optional().describe("Estimated time to complete this prompt in seconds"),
+  workspace_path: z.string().describe("Absolute path to the workspace/project root directory (pwd)"),
+  estimated_duration: z.number().describe("Estimated time to complete this prompt in seconds"),
   session_id: z.string(),
 };
 
@@ -105,8 +105,8 @@ export function registerTools(
         title: string;
         project?: string;
         git_branch?: string;
-        workspace_path?: string;
-        estimated_duration?: number;
+        workspace_path: string;
+        estimated_duration: number;
       };
 
       const session = sessionStore.create({
