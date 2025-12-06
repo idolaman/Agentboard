@@ -8,7 +8,7 @@ import { SERVER_NAME, SERVER_VERSION, TOKENLESS_MODE } from "../config.js";
 import { logger, fingerprintToken } from "../logger.js";
 import { sessionStore } from "../store/sessions.js";
 import { getServerToken } from "../auth/tokens.js";
-import { registerTools } from "./tools.js";
+import { registerTools, MCP_INSTRUCTIONS } from "./tools.js";
 import { registerResources } from "./resources.js";
 
 /** Track all active MCP server instances for broadcasting */
@@ -71,7 +71,11 @@ function createNotifier(server: McpServer) {
  * Create a new MCP server instance with all tools and resources registered.
  */
 export function createMcpServer(): McpServer {
-  const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION });
+  const server = new McpServer({
+    name: SERVER_NAME,
+    version: SERVER_VERSION,
+    instructions: MCP_INSTRUCTIONS,
+  });
 
   // Track this server
   activeServers.add(server);
