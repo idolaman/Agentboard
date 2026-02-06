@@ -17,7 +17,7 @@ An MCP-compatible HTTP/SSE server that tracks "thinking" sessions and exposes th
 ### Installation
 
 ```bash
-cd ./mcp_based_chat_detection_extension
+cd mcp_based_chat_detection_extension
 npm install
 ```
 
