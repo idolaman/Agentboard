@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./thinking-logger-ui/media/icon.png" alt="Agentboard logo" width="120" />
+  <img src="./thinking-logger-ui/media/white-icon.png" alt="Agentboard logo" width="120" />
 </p>
 
 <h2 align="center">Agentboard — All your running AI tasks, inside your IDE</h2>
