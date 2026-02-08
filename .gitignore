@@ -27,3 +27,4 @@ dist/
 .vscode_*
 .load
 .tmp-vsix/
+.claude/settings.local.json
