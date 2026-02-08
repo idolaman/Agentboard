@@ -36,8 +36,8 @@ Grab it from your editor's marketplace — takes about 10 seconds:
 
 | Editor | Link |
 |---|---|
-| **VS Code** | [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=idolaman.thinking-logger-view) |
 | **Cursor** | [Open VSX Registry](https://open-vsx.org/extension/idolaman/thinking-logger-view) |
+| **VS Code** | [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=idolaman.thinking-logger-view) |
 
 Or visit the [landing page](https://betterdev.app/agentboard) for more info.
 
