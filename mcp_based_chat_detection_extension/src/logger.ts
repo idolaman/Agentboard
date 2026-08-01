@@ -34,6 +34,7 @@ const prettyOutput: boolean = true;
 function isUsageEvent(event: string): boolean {
   if (event.startsWith('tool.')) return true;
   switch (event) {
+    case 'hook.event':
     case 'session.open':
     case 'session.closed':
     case 'session.terminate':
@@ -102,5 +103,4 @@ export const logger = {
 export function fingerprintToken(token: string): string {
   return createHash('sha256').update(token).digest('hex').slice(0, 8);
 }
-
 

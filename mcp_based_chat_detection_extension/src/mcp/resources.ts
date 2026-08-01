@@ -20,7 +20,7 @@ export function registerResources(server: McpServer): void {
     async () => {
       const boundToken = getServerToken(server);
 
-      // Get sessions based on mode and token
+      // Token-scoped sessions stay private; trusted local hook sessions are unscoped.
       const sessions = TOKENLESS_MODE
         ? sessionStore.list()
         : sessionStore.list(boundToken);
@@ -45,4 +45,3 @@ export function registerResources(server: McpServer): void {
   // Enable resource list change notifications
   server.server.registerCapabilities({ resources: { listChanged: true } });
 }
-

@@ -13,5 +13,4 @@ export const TOKENLESS_MODE = Boolean(process.env.THINKING_LOGGER_NO_TOKEN);
 
 /** Server metadata */
 export const SERVER_NAME = "thinking-logger";
-export const SERVER_VERSION = "0.1.0";
-
+export const SERVER_VERSION = "0.2.0";

@@ -22,6 +22,7 @@ import {
   registerTokenResource,
 } from "../auth/tokens.js";
 import { createMcpServer } from "../mcp/factory.js";
+import { createHookEventHandler, type HookEventSink } from "./hook-events.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Transport Registry
@@ -275,7 +276,11 @@ async function handleDelete(req: Request, res: Response): Promise<void> {
 /**
  * Create and configure the Express application.
  */
-export function createApp(): express.Application {
+interface CreateAppOptions {
+  hookEventSink?: HookEventSink;
+}
+
+export function createApp(options: CreateAppOptions = {}): express.Application {
   const app = express();
 
   // Middleware
@@ -284,10 +289,10 @@ export function createApp(): express.Application {
   app.use(express.json());
 
   // Routes
+  app.post("/hooks/events", createHookEventHandler(options.hookEventSink));
   app.post("/", handlePost);
   app.get("/", handleGet);
   app.delete("/", handleDelete);
 
   return app;
 }
-

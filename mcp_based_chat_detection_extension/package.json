@@ -1,11 +1,12 @@
 {
   "name": "thinking-logger",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP HTTP/SSE server that tracks AI thinking sessions for Agentboard",
   "main": "index.js",
   "scripts": {
     "dev": "tsx src/server.ts",
     "build": "tsc",
+    "test": "tsx --test src/hooks/*.test.ts src/http/*.test.ts",
     "start": "node dist/server.js"
   },
   "keywords": [],

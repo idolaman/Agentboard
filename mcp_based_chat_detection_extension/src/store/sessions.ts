@@ -19,8 +19,9 @@ function uuid(): string {
 /**
  * Session store - singleton that manages all session state.
  */
-class SessionStore {
+export class SessionStore {
   private readonly sessions = new Map<string, Session>();
+  private readonly localSessionIds = new Set<string>();
 
   /**
    * Create a new session.
@@ -35,6 +36,7 @@ class SessionStore {
     workspacePath?: string | undefined;
     estimatedDuration?: number | undefined;
     token?: string | undefined;
+    local?: boolean | undefined;
   }): Session {
     const session: Session = {
       id: params.sessionId || uuid(),
@@ -51,6 +53,7 @@ class SessionStore {
     if (!TOKENLESS_MODE && params.token) session.token = params.token;
 
     this.sessions.set(session.id, session);
+    if (params.local) this.localSessionIds.add(session.id);
     return session;
   }
 
@@ -97,10 +100,7 @@ class SessionStore {
     return session;
   }
 
-  /**
-   * List all sessions, optionally filtered by token.
-   * In tokenless mode, returns all sessions regardless of token parameter.
-   */
+  /** List token-scoped sessions plus sessions created by trusted local inputs. */
   list(token?: string): Session[] {
     const all = Array.from(this.sessions.values());
 
@@ -108,10 +108,8 @@ class SessionStore {
       return all.sort((a, b) => b.started_at.localeCompare(a.started_at));
     }
 
-    if (!token) return [];
-
     return all
-      .filter((s) => s.token === token)
+      .filter((session) => this.localSessionIds.has(session.id) || (token && session.token === token))
       .sort((a, b) => b.started_at.localeCompare(a.started_at));
   }
 

@@ -5,6 +5,7 @@ An MCP-compatible HTTP/SSE server that tracks "thinking" sessions and exposes th
 ### Features
 
 - Sessionized JSON‑RPC endpoint with HTTP headers for routing
+- Generic local HTTP ingest for coding-agent lifecycle hooks
 - Per‑session SSE stream for real‑time events
 - Minimal schema using `zod` and `@modelcontextprotocol/sdk`
 - Express 5 server with JSON body parsing
@@ -25,6 +26,7 @@ npm install
 
 - `npm run dev`: start the server with `tsx` for live TypeScript execution
 - `npm run build`: build to `dist/`
+- `npm test`: run the hook ingestion and HTTP route tests
 - `npm start`: run the compiled server from `dist/server.js`
 
 ### Configuration
@@ -42,7 +44,12 @@ npm install
 
 - `DELETE /` — Close the session identified by `mcp-session-id` header.
 
+- `POST /hooks/events` — Record a local coding-agent lifecycle event.
+  - Accepts only local, non-browser requests with JSON fields `platform`, `event`, `session_id`, and `workspace_path`.
+  - `event` is either `start` or `stop`.
+  - `workspace_path` is the absolute project or worktree root used by Galactic to place the session.
+  - Hook sessions are exposed through the existing `thinking://sessions` resource.
+
 ### Using with Cursor / Claude
 
 See `USAGE.md` in this folder for step‑by‑step setup instructions.
-
